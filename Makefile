@@ -11,4 +11,14 @@ run: build
 
 build_and_run: build run
 
+clean:
+	go clean
+	rm ./cmd/${BINARY_NAME}-app
 
+
+test:
+	go test ./...
+
+
+test_coverage:
+	go test ./... -coverprofile=coverage.out
