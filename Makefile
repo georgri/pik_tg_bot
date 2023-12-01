@@ -22,3 +22,13 @@ test:
 
 test_coverage:
 	go test ./... -coverprofile=coverage.out
+
+
+dep:
+	go mod download
+
+vet:
+	go vet
+
+lint:
+	golangcli-lint run --enable-all
