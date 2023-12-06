@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/georgri/pik_tg_bot/pkg/downloader"
+	"github.com/georgri/pik_tg_bot/pkg/telegrambot"
 )
 
 const (
@@ -19,4 +20,9 @@ func main() {
 	}
 
 	fmt.Printf("Body of url %v is:\n%v\n", PikUrl, body)
+
+	err = telegrambot.SendTestMessage(body)
+	if err != nil {
+		fmt.Printf("error while sending message: %v", err)
+	}
 }
