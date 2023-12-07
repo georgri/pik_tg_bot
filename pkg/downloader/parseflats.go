@@ -1,6 +1,12 @@
 package downloader
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/georgri/pik_tg_bot/pkg/util"
+	"sort"
+	"strings"
+)
 
 // url example: https://flat.pik-service.ru/api/v1/filter/flat-by-block/1240?type=1,2&location=2,3&flatLimit=80&onlyFlats=1
 // source example:
@@ -27,6 +33,10 @@ type Flat struct {
 	BlockName string `json:"blockName"` // Второй Нагатинский
 }
 
+type MessageData struct {
+	flats []Flat
+}
+
 type Metro struct {
 	Name  string `json:"name"`
 	Color string `json:"color"`
@@ -40,12 +50,83 @@ type Data struct {
 	Items []Flat `json:"items"`
 }
 
-func UnmarshallFlats(body []byte) ([]Flat, error) {
-	res := &Body{}
-	err := json.Unmarshal(body, res)
+func UnmarshallFlats(body []byte) (*MessageData, error) {
+	unmarshalled := &Body{}
+	err := json.Unmarshal(body, unmarshalled)
 	if err != nil {
 		return nil, err
 	}
 
-	return res.Data.Items, nil
+	res := &MessageData{
+		flats: unmarshalled.Data.Items,
+	}
+
+	return res, nil
+}
+
+// String print in human readable telegram friendly format
+// example input:
+// {831859 32.6 19 {Нагатинская #ACADAF} 12756380 1 free
+// https://0.db-estate.cdn.pik-service.ru/attachment/0/167b4389-02d9-eb11-84e9-02bf0a4d8e27/6_sem2_1es3_5.7-1_s_z_07ef74f33ec511c288fe633c87ef297c.svg
+// Корпус 1.3 33 Второй Нагатинский}
+// example output:
+// {number of flats} новых объектов в ЖК "Второй Нагатинский" (м.Нагатинская (color #ACADAF)):
+// Корпус 1.3 #831859[url link to flat]: 32.6m, 1r, f19, 12_756_380rub,
+func (md *MessageData) String() string {
+
+	// sorting by price
+	sort.Slice(md.flats, func(i, j int) bool {
+		return md.flats[i].Price < md.flats[j].Price
+	})
+
+	res := md.MakeHeader()
+
+	flats := make([]string, 0, len(md.flats))
+	for _, flat := range md.flats {
+		flats = append(flats, flat.String())
+	}
+
+	res += "\n" + strings.Join(flats, "\n") // try <br>
+
+	return res
+}
+
+// MakeHeader example:
+// // {number of flats} новых объектов в ЖК "Второй Нагатинский" (м.Нагатинская (color #ACADAF)):
+func (md *MessageData) MakeHeader() string {
+
+	if md == nil || len(md.flats) == 0 {
+		return ""
+	}
+
+	flat := md.flats[0]
+	numFlats := len(md.flats)
+	blockName := flat.BlockName
+	// metro := flat.Metro.Name // to large message
+	// metroColor := flat.Metro.Color // telegram doesn't support text color :(
+
+	res := fmt.Sprintf("%v new flats in %v:",
+		numFlats, blockName)
+
+	return res
+}
+
+// String example:
+// Корпус 1.3 #831859[url link to flat]: 32.6m, 1r, f19, 12_756_380rub,
+func (f *Flat) String() string {
+	if f == nil {
+		return ""
+	}
+
+	corp := strings.Split(f.BulkName, " ")[1]
+	id := f.ID
+	flatURL := fmt.Sprintf("https://www.pik.ru/flat/%v", id)
+	area := fmt.Sprintf("%.1f", f.Area)
+	rooms := f.Rooms
+	floor := f.Floor
+	price := util.ThousandSep(f.Price, " ")
+
+	res := fmt.Sprintf("%v: <a href=\"%v\">%vr, %vm2</a>, %vR, f%v", corp, flatURL, rooms, area, price, floor)
+
+	return res
 }

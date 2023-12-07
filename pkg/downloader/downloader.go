@@ -6,27 +6,38 @@ import (
 	"net/http"
 )
 
-func GetUrl(url string) (string, error) {
+func GetUrl(url string) ([]byte, error) {
 	resp, err := http.Get(url)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+	return body, nil
+}
+
+func GetFlats(url string) (string, error) {
+	body, err := GetUrl(url)
+	if err != nil {
+		return "", fmt.Errorf("error while getting url %v: %v", url, err)
 	}
 
-	flats, err := UnmarshallFlats(body)
+	msgData, err := UnmarshallFlats(body)
 	if err != nil {
 		return "", err
 	}
 
-	if len(flats) == 0 {
+	if len(msgData.flats) == 0 {
 		return "", fmt.Errorf("got 0 flats from url")
 	}
 
-	return fmt.Sprintf("List of flats: %v", flats), nil
+	// convert flats to human readable message
+	msg := msgData.String()
+
+	return msg, nil
 }

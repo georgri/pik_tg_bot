@@ -13,15 +13,15 @@ const (
 func main() {
 	fmt.Printf("Hello world!\n")
 
-	body, err := downloader.GetUrl(PikUrl)
+	flats, err := downloader.GetFlats(PikUrl)
 
 	if err != nil {
 		fmt.Printf("error getting pik url: %v", err)
 	}
 
-	fmt.Printf("Body of url %v is:\n%v\n", PikUrl, body)
+	fmt.Printf("Got flats: %v", flats)
 
-	err = telegrambot.SendTestMessage(body)
+	err = telegrambot.SendTestMessage(flats)
 	if err != nil {
 		fmt.Printf("error while sending message: %v", err)
 	}

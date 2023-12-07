@@ -32,8 +32,10 @@ func SendMessageWithToken(token string, chatID int64, text string) error {
 	sendMessageUrl := fmt.Sprintf("https://api.telegram.org/bot%v/sendMessage", token)
 
 	values := url.Values{
-		"chat_id": []string{fmt.Sprintf("%v", chatID)},
-		"text":    []string{text},
+		"chat_id":                  []string{fmt.Sprintf("%v", chatID)},
+		"text":                     []string{text},
+		"parse_mode":               []string{"HTML"},
+		"disable_web_page_preview": []string{"True"},
 	}
 	// post http request
 	resp, err := http.PostForm(sendMessageUrl, values)
