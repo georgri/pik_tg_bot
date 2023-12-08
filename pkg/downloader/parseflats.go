@@ -34,7 +34,7 @@ type Flat struct {
 }
 
 type MessageData struct {
-	flats []Flat
+	Flats []Flat `json:"flats"`
 }
 
 type Metro struct {
@@ -58,7 +58,7 @@ func UnmarshallFlats(body []byte) (*MessageData, error) {
 	}
 
 	res := &MessageData{
-		flats: unmarshalled.Data.Items,
+		Flats: unmarshalled.Data.Items,
 	}
 
 	return res, nil
@@ -70,19 +70,19 @@ func UnmarshallFlats(body []byte) (*MessageData, error) {
 // https://0.db-estate.cdn.pik-service.ru/attachment/0/167b4389-02d9-eb11-84e9-02bf0a4d8e27/6_sem2_1es3_5.7-1_s_z_07ef74f33ec511c288fe633c87ef297c.svg
 // Корпус 1.3 33 Второй Нагатинский}
 // example output:
-// {number of flats} новых объектов в ЖК "Второй Нагатинский" (м.Нагатинская (color #ACADAF)):
+// {number of Flats} новых объектов в ЖК "Второй Нагатинский" (м.Нагатинская (color #ACADAF)):
 // Корпус 1.3 #831859[url link to flat]: 32.6m, 1r, f19, 12_756_380rub,
 func (md *MessageData) String() string {
 
 	// sorting by price
-	sort.Slice(md.flats, func(i, j int) bool {
-		return md.flats[i].Price < md.flats[j].Price
+	sort.Slice(md.Flats, func(i, j int) bool {
+		return md.Flats[i].Price < md.Flats[j].Price
 	})
 
 	res := md.MakeHeader()
 
-	flats := make([]string, 0, len(md.flats))
-	for _, flat := range md.flats {
+	flats := make([]string, 0, len(md.Flats))
+	for _, flat := range md.Flats {
 		flats = append(flats, flat.String())
 	}
 
@@ -92,20 +92,20 @@ func (md *MessageData) String() string {
 }
 
 // MakeHeader example:
-// // {number of flats} новых объектов в ЖК "Второй Нагатинский" (м.Нагатинская (color #ACADAF)):
+// // {number of Flats} новых объектов в ЖК "Второй Нагатинский" (м.Нагатинская (color #ACADAF)):
 func (md *MessageData) MakeHeader() string {
 
-	if md == nil || len(md.flats) == 0 {
+	if md == nil || len(md.Flats) == 0 {
 		return ""
 	}
 
-	flat := md.flats[0]
-	numFlats := len(md.flats)
+	flat := md.Flats[0]
+	numFlats := len(md.Flats)
 	blockName := flat.BlockName
 	// metro := flat.Metro.Name // to large message
 	// metroColor := flat.Metro.Color // telegram doesn't support text color :(
 
-	res := fmt.Sprintf("%v new flats in %v:",
+	res := fmt.Sprintf("%v new Flats in %v:",
 		numFlats, blockName)
 
 	return res

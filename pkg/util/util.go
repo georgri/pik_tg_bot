@@ -35,3 +35,19 @@ func ReverseInPlace[T any](arr []T) {
 		arr[i], arr[size-i-1] = arr[size-i-1], arr[i]
 	}
 }
+
+func FilterSliceInPlace[T comparable](arr []T, check func(int) bool) []T {
+	if len(arr) == 0 {
+		return arr
+	}
+	
+	size := 0
+	for i := range arr {
+		if check(i) {
+			arr[i], arr[size] = arr[size], arr[i]
+			size += 1
+		}
+	}
+
+	return arr[:size]
+}
