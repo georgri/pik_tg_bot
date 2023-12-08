@@ -1,4 +1,4 @@
-package downloader
+package flatstorage
 
 import (
 	"encoding/json"

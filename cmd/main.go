@@ -10,7 +10,7 @@ import (
 func main() {
 	fmt.Printf("Hello world!\n")
 
-	flats, filtered, err := downloader.GetFlats()
+	flats, filtered, updateCallback, err := downloader.GetFlats()
 	if err != nil {
 		fmt.Printf("error getting pik url: %v", err)
 	}
@@ -25,5 +25,11 @@ func main() {
 	err = telegrambot.SendTestMessage(flats)
 	if err != nil {
 		fmt.Printf("error while sending message: %v", err)
+		return
+	}
+
+	err = updateCallback()
+	if err != nil {
+		fmt.Printf("update callback failed: %v", err)
 	}
 }

@@ -1,17 +1,13 @@
 package downloader
 
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/georgri/pik_tg_bot/pkg/util"
+	"github.com/georgri/pik_tg_bot/pkg/flatstorage"
 	"io"
 	"net/http"
-	"os"
 )
 
 const (
-	fileFlatStorage = "data/2ngt.json"
-
 	PikUrl = "https://flat.pik-service.ru/api/v1/filter/flat-by-block/1240?flatLimit=20"
 
 	flatPageFlag = "flatPage"
@@ -32,13 +28,13 @@ func GetUrl(url string) ([]byte, error) {
 	return body, nil
 }
 
-func GetFlatsSinglePage(url string) (*MessageData, error) {
+func GetFlatsSinglePage(url string) (*flatstorage.MessageData, error) {
 	body, err := GetUrl(url)
 	if err != nil {
 		return nil, fmt.Errorf("error while getting url %v: %v", url, err)
 	}
 
-	msgData, err := UnmarshallFlats(body)
+	msgData, err := flatstorage.UnmarshallFlats(body)
 	if err != nil {
 		return nil, err
 	}
@@ -46,12 +42,12 @@ func GetFlatsSinglePage(url string) (*MessageData, error) {
 	return msgData, nil
 }
 
-func GetFlats() (string, int, error) {
+func GetFlats() (message string, filtered int, updateCallback func() error, err error) {
 	url := PikUrl
 
 	msgData, err := GetFlatsSinglePage(url)
 	if err != nil {
-		return "", 0, err
+		return "", 0, nil, err
 	}
 
 	if msgData.LastPage > 1 {
@@ -59,7 +55,7 @@ func GetFlats() (string, int, error) {
 			addUrl := fmt.Sprintf("%v&%v=%v", url, flatPageFlag, i)
 			addMsgData, err := GetFlatsSinglePage(addUrl)
 			if err != nil {
-				return "", 0, err
+				return "", 0, nil, err
 			}
 			msgData.Flats = append(msgData.Flats, addMsgData.Flats...)
 		}
@@ -67,63 +63,23 @@ func GetFlats() (string, int, error) {
 	}
 
 	if len(msgData.Flats) == 0 {
-		return "", 0, fmt.Errorf("got 0 Flats from url")
+		return "", 0, nil, fmt.Errorf("got 0 Flats from url")
 	}
 
 	// filter through local file (MVP)
 	sizeBefore := len(msgData.Flats)
-	msgData, err = FilterAndUpdateWithFlatStorage(msgData)
+	msgData, err = flatstorage.FilterWithFlatStorage(msgData)
 	if err != nil {
-		return "", 0, fmt.Errorf("err while reading/updating local Flats file: %v", err)
+		return "", 0, nil, fmt.Errorf("err while reading/updating local Flats file: %v", err)
 	}
 
 	// convert Flats to human-readable message
 	msg := msgData.String()
 
-	return msg, sizeBefore - len(msgData.Flats), nil
-}
-
-// FilterAndUpdateWithFlatStorage filter through local file (MVP)
-func FilterAndUpdateWithFlatStorage(msg *MessageData) (*MessageData, error) {
-	oldMessageData := &MessageData{}
-
-	// read all from file fileFlatStorage
-	content, err := os.ReadFile(fileFlatStorage)
-	if err != nil {
-		// TODO: handle error somehow?
-	} else {
-		// unmarshal into json
-		err = json.Unmarshal(content, &oldMessageData)
-		if err != nil {
-			return nil, err
-		}
+	updateCallback = func() error {
+		_, err = flatstorage.UpdateFlatStorage(msgData)
+		return err
 	}
 
-	// gen old map
-	oldFlatsMap := make(map[int64]Flat)
-	for _, flat := range oldMessageData.Flats {
-		oldFlatsMap[flat.ID] = flat
-	}
-
-	// filter out existing Flats by ID
-	msg.Flats = util.FilterSliceInPlace(msg.Flats, func(i int) bool {
-		_, ok := oldFlatsMap[msg.Flats[i].ID]
-		return !ok
-	})
-
-	// append new Flats to file
-	for _, flat := range msg.Flats {
-		oldMessageData.Flats = append(oldMessageData.Flats, flat)
-	}
-
-	newContent, err := json.Marshal(oldMessageData)
-	if err != nil {
-		return nil, err
-	}
-	err = os.WriteFile(fileFlatStorage, newContent, 0644)
-	if err != nil {
-		return nil, err
-	}
-
-	return msg, nil
+	return msg, sizeBefore - len(msgData.Flats), updateCallback, nil
 }
