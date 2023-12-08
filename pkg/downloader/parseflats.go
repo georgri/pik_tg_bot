@@ -35,6 +35,8 @@ type Flat struct {
 
 type MessageData struct {
 	Flats []Flat `json:"flats"`
+
+	LastPage int
 }
 
 type Metro struct {
@@ -46,8 +48,13 @@ type Body struct {
 	Data Data `json:"data"`
 }
 
+type Stats struct {
+	LastPage int `json:"lastPage"`
+}
+
 type Data struct {
 	Items []Flat `json:"items"`
+	Stats Stats  `json:"stats"`
 }
 
 func UnmarshallFlats(body []byte) (*MessageData, error) {
@@ -59,6 +66,8 @@ func UnmarshallFlats(body []byte) (*MessageData, error) {
 
 	res := &MessageData{
 		Flats: unmarshalled.Data.Items,
+
+		LastPage: unmarshalled.Data.Stats.LastPage,
 	}
 
 	return res, nil

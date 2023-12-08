@@ -9,7 +9,13 @@ import (
 	"os"
 )
 
-const fileFlatStorage = "2ngt.json"
+const (
+	fileFlatStorage = "data/2ngt.json"
+
+	PikUrl = "https://flat.pik-service.ru/api/v1/filter/flat-by-block/1240?flatLimit=20"
+
+	flatPageFlag = "flatPage"
+)
 
 func GetUrl(url string) ([]byte, error) {
 	resp, err := http.Get(url)
@@ -26,31 +32,55 @@ func GetUrl(url string) ([]byte, error) {
 	return body, nil
 }
 
-func GetFlats(url string) (string, error) {
+func GetFlatsSinglePage(url string) (*MessageData, error) {
 	body, err := GetUrl(url)
 	if err != nil {
-		return "", fmt.Errorf("error while getting url %v: %v", url, err)
+		return nil, fmt.Errorf("error while getting url %v: %v", url, err)
 	}
 
 	msgData, err := UnmarshallFlats(body)
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+
+	return msgData, nil
+}
+
+func GetFlats() (string, int, error) {
+	url := PikUrl
+
+	msgData, err := GetFlatsSinglePage(url)
+	if err != nil {
+		return "", 0, err
+	}
+
+	if msgData.LastPage > 1 {
+		for i := 2; i <= msgData.LastPage; i++ {
+			addUrl := fmt.Sprintf("%v&%v=%v", url, flatPageFlag, i)
+			addMsgData, err := GetFlatsSinglePage(addUrl)
+			if err != nil {
+				return "", 0, err
+			}
+			msgData.Flats = append(msgData.Flats, addMsgData.Flats...)
+		}
+
 	}
 
 	if len(msgData.Flats) == 0 {
-		return "", fmt.Errorf("got 0 Flats from url")
+		return "", 0, fmt.Errorf("got 0 Flats from url")
 	}
 
 	// filter through local file (MVP)
+	sizeBefore := len(msgData.Flats)
 	msgData, err = FilterAndUpdateWithFlatStorage(msgData)
 	if err != nil {
-		return "", fmt.Errorf("err while reading/updating local Flats file: %v", err)
+		return "", 0, fmt.Errorf("err while reading/updating local Flats file: %v", err)
 	}
 
 	// convert Flats to human-readable message
 	msg := msgData.String()
 
-	return msg, nil
+	return msg, sizeBefore - len(msgData.Flats), nil
 }
 
 // FilterAndUpdateWithFlatStorage filter through local file (MVP)
