@@ -5,9 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
-const TestChatID = -1002057808675
+const (
+	TestChatID = -1002057808675
+
+	messageCharLimit = 4000
+)
 
 // An example of how to send message with test bot:
 // https://api.telegram.org/bot6819149165:AAEQWnUotV_YsGS7EPaNbUKZpcvKhsmOgNg/sendMessage?chat_id=-1002057808675&text=hello_friend
@@ -20,7 +25,16 @@ func SendTestMessage(text string) error {
 func SendMessage(chatID int64, text string) error {
 	token := GetBotToken()
 
-	return SendMessageWithToken(token, chatID, text)
+	chunks := SplitTextIntoSendableChunks(text)
+
+	for _, msg := range chunks {
+		err := SendMessageWithToken(token, chatID, msg)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type SendResponse struct {
@@ -66,4 +80,23 @@ func SendMessageWithToken(token string, chatID int64, text string) error {
 	}
 
 	return nil
+}
+
+func SplitTextIntoSendableChunks(text string) []string {
+	lines := strings.Split(text, "\n")
+
+	res := make([]string, 0, 5)
+	var bufFrom, bufSize int
+	for i, line := range lines {
+		if bufSize+len(line) > messageCharLimit {
+			res = append(res, strings.Join(lines[bufFrom:i], "\n"))
+			bufFrom = i
+			bufSize = 0
+		}
+		bufSize += len(line) + 1
+	}
+
+	res = append(res, strings.Join(lines[bufFrom:], "\n"))
+
+	return res
 }

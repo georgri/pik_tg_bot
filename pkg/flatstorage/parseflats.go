@@ -114,7 +114,7 @@ func (md *MessageData) MakeHeader() string {
 	// metro := flat.Metro.Name // to large message
 	// metroColor := flat.Metro.Color // telegram doesn't support text color :(
 
-	res := fmt.Sprintf("%v new Flats in %v:",
+	res := fmt.Sprintf("%v new flats in %v:",
 		numFlats, blockName)
 
 	return res
