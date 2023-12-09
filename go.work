@@ -1,0 +1,9 @@
+go 1.21
+
+use (
+	./cmd
+	./pkg/downloader
+	./pkg/flatstorage
+	./pkg/telegrambot
+	./pkg/util
+)
