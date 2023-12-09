@@ -7,13 +7,16 @@ import (
 	"os"
 )
 
-const fileFlatStorage = "data/2ngt.json"
+const (
+	storageDir    = "data"
+	storageFormat = "json"
+)
 
-func ReadFlatStorage() (*MessageData, error) {
+func ReadFlatStorage(fileName string) (*MessageData, error) {
 	msgData := &MessageData{}
 
 	// read all from file fileFlatStorage
-	content, err := os.ReadFile(fileFlatStorage)
+	content, err := os.ReadFile(fileName)
 	if err != nil {
 		// TODO: handle error somehow?
 	} else {
@@ -28,8 +31,13 @@ func ReadFlatStorage() (*MessageData, error) {
 }
 
 // FilterWithFlatStorage filter through local file (MVP)
-func FilterWithFlatStorage(msg *MessageData) (*MessageData, error) {
-	oldMessageData, err := ReadFlatStorage()
+func FilterWithFlatStorage(msg *MessageData, chatID int64) (*MessageData, error) {
+	if msg == nil || len(msg.Flats) == 0 {
+		return msg, nil
+	}
+
+	storageFileName := GetStorageFileName(msg, chatID)
+	oldMessageData, err := ReadFlatStorage(storageFileName)
 	if err != nil {
 		return nil, err
 	}
@@ -60,12 +68,13 @@ func FilterWithFlatStorageHelper(oldMsg, newMsg *MessageData) *MessageData {
 }
 
 // UpdateFlatStorage update local file (MVP)
-func UpdateFlatStorage(msg *MessageData) (numAdded int, err error) {
+func UpdateFlatStorage(msg *MessageData, chatID int64) (numAdded int, err error) {
 	if msg == nil || len(msg.Flats) == 0 {
 		return 0, fmt.Errorf("did not update anything")
 	}
 
-	oldMessageData, err := ReadFlatStorage()
+	storageFileName := GetStorageFileName(msg, chatID)
+	oldMessageData, err := ReadFlatStorage(storageFileName)
 	if err != nil {
 		return 0, err
 	}
@@ -83,10 +92,15 @@ func UpdateFlatStorage(msg *MessageData) (numAdded int, err error) {
 	if err != nil {
 		return 0, err
 	}
-	err = os.WriteFile(fileFlatStorage, newContent, 0644)
+	err = os.WriteFile(storageFileName, newContent, 0644)
 	if err != nil {
 		return 0, err
 	}
 
 	return numAdded, nil
+}
+
+func GetStorageFileName(msg *MessageData, chatID int64) string {
+	blockSlug := msg.GetBlockSlug()
+	return fmt.Sprintf("%v/%v_%v.%v", storageDir, blockSlug, chatID, storageFormat)
 }

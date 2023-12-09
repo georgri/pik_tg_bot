@@ -31,6 +31,7 @@ type Flat struct {
 	BulkName  string `json:"bulkName"`  // Корпус 1.1
 	MaxFloor  int8   `json:"maxFloor"`  // 33
 	BlockName string `json:"blockName"` // Второй Нагатинский
+	BlockSlug string `json:"blockSlug"`
 }
 
 type MessageData struct {
@@ -118,6 +119,13 @@ func (md *MessageData) MakeHeader() string {
 		numFlats, blockName)
 
 	return res
+}
+
+func (md *MessageData) GetBlockSlug() string {
+	if md == nil || len(md.Flats) == 0 {
+		return ""
+	}
+	return md.Flats[0].BlockSlug
 }
 
 // String example:

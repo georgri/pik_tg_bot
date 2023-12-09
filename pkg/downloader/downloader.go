@@ -42,7 +42,7 @@ func GetFlatsSinglePage(url string) (*flatstorage.MessageData, error) {
 	return msgData, nil
 }
 
-func GetFlats() (message string, filtered int, updateCallback func() error, err error) {
+func GetFlats(chatID int64) (message string, filtered int, updateCallback func() error, err error) {
 	url := PikUrl
 
 	msgData, err := GetFlatsSinglePage(url)
@@ -68,7 +68,7 @@ func GetFlats() (message string, filtered int, updateCallback func() error, err 
 
 	// filter through local file (MVP)
 	sizeBefore := len(msgData.Flats)
-	msgData, err = flatstorage.FilterWithFlatStorage(msgData)
+	msgData, err = flatstorage.FilterWithFlatStorage(msgData, chatID)
 	if err != nil {
 		return "", 0, nil, fmt.Errorf("err while reading/updating local Flats file: %v", err)
 	}
@@ -77,7 +77,7 @@ func GetFlats() (message string, filtered int, updateCallback func() error, err 
 	msg := msgData.String()
 
 	updateCallback = func() error {
-		_, err = flatstorage.UpdateFlatStorage(msgData)
+		_, err = flatstorage.UpdateFlatStorage(msgData, chatID)
 		return err
 	}
 

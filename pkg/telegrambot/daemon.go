@@ -44,7 +44,9 @@ func RunForever(env string) {
 }
 
 func RunOnce() {
-	flats, filtered, updateCallback, err := downloader.GetFlats()
+	// TODO: cycle through all chats
+	chatID := int64(TestChatID)
+	flats, filtered, updateCallback, err := downloader.GetFlats(chatID)
 	if err != nil {
 		log.Printf("error getting response from pik.ru: %v", err)
 		return
