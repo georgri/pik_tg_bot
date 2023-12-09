@@ -40,10 +40,28 @@ func FilterSliceInPlace[T comparable](arr []T, check func(int) bool) []T {
 	if len(arr) == 0 {
 		return arr
 	}
-	
+
 	size := 0
 	for i := range arr {
 		if check(i) {
+			arr[i], arr[size] = arr[size], arr[i]
+			size += 1
+		}
+	}
+
+	return arr[:size]
+}
+
+func FilterUnique[T, K comparable](arr []T, key func(int) K) []T {
+	if len(arr) == 0 {
+		return arr
+	}
+
+	keys := make(map[K]struct{})
+
+	size := 0
+	for i := range arr {
+		if _, ok := keys[key(i)]; !ok {
 			arr[i], arr[size] = arr[size], arr[i]
 			size += 1
 		}

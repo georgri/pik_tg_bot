@@ -52,6 +52,10 @@ func FilterWithFlatStorageHelper(oldMsg, newMsg *MessageData) *MessageData {
 		return !ok
 	})
 
+	newMsg.Flats = util.FilterUnique(newMsg.Flats, func(i int) int64 {
+		return newMsg.Flats[i].ID
+	})
+
 	return newMsg
 }
 

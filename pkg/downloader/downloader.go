@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	PikUrl = "https://flat.pik-service.ru/api/v1/filter/flat-by-block/1240?flatLimit=20"
+	PikUrl = "https://flat.pik-service.ru/api/v1/filter/flat-by-block/1240?sortBy=price&orderBy=asc&onlyFlats=1&flatLimit=16"
 
 	flatPageFlag = "flatPage"
 )
