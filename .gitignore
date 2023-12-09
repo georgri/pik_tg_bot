@@ -10,9 +10,10 @@
 *-app
 *.a
 
-# downloaded data
+# data
 *.token
 *.json
+*.log
 
 # Test binary, built with `go test -c`
 *.test
