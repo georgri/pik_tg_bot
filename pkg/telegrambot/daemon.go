@@ -14,15 +14,7 @@ const (
 	logfile = "logs/bot.log"
 )
 
-var EnvType string
-
-func GetEnvType() string {
-	return EnvType
-}
-
-func RunForever(env string) {
-	EnvType = env
-
+func RunForever() {
 	// set up simple logging
 	f, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
@@ -44,9 +36,19 @@ func RunForever(env string) {
 }
 
 func RunOnce() {
-	// TODO: cycle through all chats
-	chatID := int64(TestChatID)
-	flats, filtered, updateCallback, err := downloader.GetFlats(chatID)
+	envType := GetEnvType()
+
+	for _, channelInfo := range ChannelIDs[envType] {
+		ProcessWithChannelInfo(channelInfo)
+	}
+}
+
+func ProcessWithChannelInfo(channelInfo ChannelInfo) {
+	chatID := channelInfo.ChatID
+	blockSlug := channelInfo.BlockSlug
+	blockID := GetBlockIDBySlug(blockSlug)
+	
+	flats, filtered, updateCallback, err := downloader.GetFlats(chatID, blockID)
 	if err != nil {
 		log.Printf("error getting response from pik.ru: %v", err)
 		return
@@ -59,7 +61,7 @@ func RunOnce() {
 
 	log.Printf("Got flats: %v", flats)
 
-	err = SendTestMessage(flats)
+	err = SendMessage(chatID, flats)
 	if err != nil {
 		log.Printf("error while sending message: %v", err)
 		return

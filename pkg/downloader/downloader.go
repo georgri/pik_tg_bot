@@ -8,9 +8,13 @@ import (
 )
 
 const (
-	PikUrl = "https://flat.pik-service.ru/api/v1/filter/flat-by-block/1240?sortBy=price&orderBy=asc&onlyFlats=1&flatLimit=16"
+	PikUrl    = "https://flat.pik-service.ru/api/v1/filter/flat-by-block"
+	UrlParams = "sortBy=price&orderBy=asc&onlyFlats=1&flatLimit=16"
 
 	flatPageFlag = "flatPage"
+
+	// TODO: download this url to monitor new projects
+	BlocksUrl = "https://flat.pik-service.ru/api/v1/filter/block?type=1,2&location=2,3&flatLimit=50&blockLimit=1000&geoBox=55.33638001424489,56.14056105282492-36.96336293218961,38.11418080328337"
 )
 
 func GetUrl(url string) ([]byte, error) {
@@ -42,8 +46,8 @@ func GetFlatsSinglePage(url string) (*flatstorage.MessageData, error) {
 	return msgData, nil
 }
 
-func GetFlats(chatID int64) (message string, filtered int, updateCallback func() error, err error) {
-	url := PikUrl
+func GetFlats(chatID int64, blockID int64) (message string, filtered int, updateCallback func() error, err error) {
+	url := fmt.Sprintf("%v/%v?%v", PikUrl, blockID, UrlParams)
 
 	msgData, err := GetFlatsSinglePage(url)
 	if err != nil {
@@ -59,7 +63,6 @@ func GetFlats(chatID int64) (message string, filtered int, updateCallback func()
 			}
 			msgData.Flats = append(msgData.Flats, addMsgData.Flats...)
 		}
-
 	}
 
 	if len(msgData.Flats) == 0 {

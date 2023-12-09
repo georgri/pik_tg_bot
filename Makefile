@@ -2,13 +2,13 @@ BINARY_NAME=pik_tg_bot
 .DEFAULT_GOAL := run
 
 build:
+	mkdir -p logs
+	mkdir -p data
 	go build -o ./${BINARY_NAME}-app ./cmd/main.go
 
 
 run: build
-	mkdir -p logs
-	mkdir -p data
-	./${BINARY_NAME}-app
+	./${BINARY_NAME}-app -envtype testing
 
 
 build_and_run: build run
