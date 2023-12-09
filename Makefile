@@ -6,6 +6,8 @@ build:
 
 
 run: build
+	mkdir -p logs
+	mkdir -p data
 	./cmd/${BINARY_NAME}-app
 
 
