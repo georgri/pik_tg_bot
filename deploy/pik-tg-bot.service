@@ -6,7 +6,7 @@ Environment=GO_ENV=production
 Type=simple
 Restart=always
 RestartSec=5s
-ExecStart=/home/georgri/go/src/pik_tg_bot/pik_tg_bot-app
+ExecStart=/home/georgri/go/src/pik_tg_bot/pik_tg_bot-app -envtype prod
 WorkingDirectory=/home/georgri/go/src/pik_tg_bot/
 
 [Install]
