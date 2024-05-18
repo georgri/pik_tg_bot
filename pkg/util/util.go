@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"golang.org/x/exp/constraints"
@@ -77,4 +78,15 @@ func Max[T constraints.Ordered](a, b T) T {
 		return a
 	}
 	return b
+}
+
+func SortedKeys[K constraints.Ordered, V any](m map[K]V) []K {
+	keys := make([]K, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
+	return keys
 }

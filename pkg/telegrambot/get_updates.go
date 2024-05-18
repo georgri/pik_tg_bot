@@ -163,14 +163,8 @@ func processUpdate(update *UpdateStruct) {
 		switch command {
 		case "/hello":
 			sendHello(update.Message.Chat.Id, update.Message.From.Username)
+		case "/list":
+			sendList(update.Message.Chat.Id)
 		}
-	}
-}
-
-func sendHello(chatID int64, username string) {
-	msg := fmt.Sprintf("Hello, %v!", username)
-	err := SendMessage(chatID, msg)
-	if err != nil {
-		log.Printf("failed to send message %v to chatID %v: %v", msg, chatID, err)
 	}
 }

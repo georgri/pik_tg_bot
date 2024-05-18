@@ -2,6 +2,7 @@ package telegrambot
 
 import (
 	"flag"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -79,7 +80,6 @@ var ChannelIDs = map[EnvType][]ChannelInfo{
 			ChatID:    -1002123708132,
 			BlockSlug: "hp",
 		},
-
 	},
 }
 
@@ -112,6 +112,14 @@ func init() {
 func GetBlockIDBySlug(slug string) int64 {
 	blockInfo, _ := BlockSlugs[slug]
 	return blockInfo.ID
+}
+
+func GetBlockURLBySlug(slug string) string {
+	return fmt.Sprintf("https://www.pik.ru/%v", slug)
+}
+
+func (b BlockInfo) String() string {
+	return fmt.Sprintf("%v: <a href=\"%v\">%v</a>", b.Name, GetBlockURLBySlug(b.Slug), b.Slug)
 }
 
 // TODO: download from website
