@@ -29,6 +29,8 @@ func RunForever() {
 
 	log.SetOutput(f)
 
+	go GetUpdatesForever()
+
 	for {
 		RunOnce()
 		time.Sleep(invokeEvery)

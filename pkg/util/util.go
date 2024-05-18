@@ -3,6 +3,8 @@ package util
 import (
 	"fmt"
 	"strings"
+
+	"golang.org/x/exp/constraints"
 )
 
 // ThousandSep format int with thousands divided by sep
@@ -68,4 +70,11 @@ func FilterUnique[T, K comparable](arr []T, key func(int) K) []T {
 	}
 
 	return arr[:size]
+}
+
+func Max[T constraints.Ordered](a, b T) T {
+	if a > b {
+		return a
+	}
+	return b
 }
