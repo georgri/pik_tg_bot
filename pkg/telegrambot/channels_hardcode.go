@@ -71,6 +71,15 @@ var ChannelIDs = map[EnvType][]ChannelInfo{
 			ChatID:    -1002066659264,
 			BlockSlug: "ytnv",
 		},
+		{
+			ChatID:    -1002087536270,
+			BlockSlug: "kolskaya8",
+		},
+		{
+			ChatID:    -1002123708132,
+			BlockSlug: "hp",
+		},
+
 	},
 }
 
