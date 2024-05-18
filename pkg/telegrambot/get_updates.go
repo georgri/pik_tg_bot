@@ -165,6 +165,8 @@ func processUpdate(update *UpdateStruct) {
 			sendHello(update.Message.Chat.Id, update.Message.From.Username)
 		case "/list":
 			sendList(update.Message.Chat.Id)
+		case "/dump":
+			sendDump(update.Message.Chat.Id, update.Message.Text[offset+length:])
 		}
 	}
 }

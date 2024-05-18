@@ -102,5 +102,9 @@ func UpdateFlatStorage(msg *MessageData, chatID int64) (numAdded int, err error)
 
 func GetStorageFileName(msg *MessageData, chatID int64) string {
 	blockSlug := msg.GetBlockSlug()
+	return GetStorageFileNameByBlockSlugAndChatID(blockSlug, chatID)
+}
+
+func GetStorageFileNameByBlockSlugAndChatID(blockSlug string, chatID int64) string {
 	return fmt.Sprintf("%v/%v_%v.%v", storageDir, blockSlug, chatID, storageFormat)
 }

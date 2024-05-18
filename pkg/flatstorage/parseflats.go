@@ -32,6 +32,8 @@ type Flat struct {
 	MaxFloor  int8   `json:"maxFloor"`  // 33
 	BlockName string `json:"blockName"` // Второй Нагатинский
 	BlockSlug string `json:"blockSlug"`
+	Created   string `json:"created,omitempty"` // when the flat first appeared
+	Updated   string `json:"updated,omitempty"` // when the flat was last seen (to filter out the old ones)
 }
 
 type MessageData struct {
