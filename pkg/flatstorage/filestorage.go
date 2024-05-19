@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/georgri/pik_tg_bot/pkg/util"
 	"os"
+	"time"
 )
 
 const (
@@ -67,8 +68,55 @@ func FilterWithFlatStorageHelper(oldMsg, newMsg *MessageData) *MessageData {
 	return newMsg
 }
 
+func MergeNewFlatsIntoOld(oldMsg, newMsg *MessageData) *MessageData {
+	newMsg.Flats = util.FilterUnique(newMsg.Flats, func(i int) int64 {
+		return newMsg.Flats[i].ID
+	})
+
+	// gen new map
+	newFlatsMap := make(map[int64]struct{})
+	for i := range newMsg.Flats {
+		newFlatsMap[newMsg.Flats[i].ID] = struct{}{}
+	}
+
+	now := time.Now().Format(time.RFC3339)
+	past := time.Now().Add(-10 * 365 * 24 * time.Hour).Format(time.RFC3339)
+
+	// old map with created dates
+	oldFlatsMap := make(map[int64]string)
+	for i := range oldMsg.Flats {
+		if len(oldMsg.Flats[i].Created) == 0 {
+			oldMsg.Flats[i].Created = past
+		}
+		if len(oldMsg.Flats[i].Updated) == 0 {
+			oldMsg.Flats[i].Updated = oldMsg.Flats[i].Created
+		}
+		oldFlatsMap[oldMsg.Flats[i].ID] = oldMsg.Flats[i].Created
+	}
+
+	// filter out existing old Flats by ID
+	oldMsg.Flats = util.FilterSliceInPlace(oldMsg.Flats, func(i int) bool {
+		_, ok := newFlatsMap[oldMsg.Flats[i].ID]
+		return !ok
+	})
+
+	// update both "Created" and "Updated" for new flats
+	for i := range newMsg.Flats {
+		newMsg.Flats[i].Created = now
+		if created, ok := oldFlatsMap[newMsg.Flats[i].ID]; ok {
+			newMsg.Flats[i].Created = created
+		}
+		newMsg.Flats[i].Updated = now
+	}
+
+	// dump new into old
+	oldMsg.Flats = append(oldMsg.Flats, newMsg.Flats...)
+
+	return oldMsg
+}
+
 // UpdateFlatStorage update local file (MVP)
-func UpdateFlatStorage(msg *MessageData, chatID int64) (numAdded int, err error) {
+func UpdateFlatStorage(msg *MessageData, chatID int64) (numUpdated int, err error) {
 	if msg == nil || len(msg.Flats) == 0 {
 		return 0, fmt.Errorf("did not update anything")
 	}
@@ -79,14 +127,9 @@ func UpdateFlatStorage(msg *MessageData, chatID int64) (numAdded int, err error)
 		return 0, err
 	}
 
-	msg = FilterWithFlatStorageHelper(oldMessageData, msg)
+	oldMessageData = MergeNewFlatsIntoOld(oldMessageData, msg)
 
-	numAdded = len(msg.Flats)
-
-	// append new Flats to file
-	for _, flat := range msg.Flats {
-		oldMessageData.Flats = append(oldMessageData.Flats, flat)
-	}
+	numUpdated = len(msg.Flats)
 
 	newContent, err := json.Marshal(oldMessageData)
 	if err != nil {
@@ -97,7 +140,7 @@ func UpdateFlatStorage(msg *MessageData, chatID int64) (numAdded int, err error)
 		return 0, err
 	}
 
-	return numAdded, nil
+	return numUpdated, nil
 }
 
 func GetStorageFileName(msg *MessageData, chatID int64) string {

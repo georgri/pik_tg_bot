@@ -69,6 +69,8 @@ func GetFlats(chatID int64, blockID int64) (message string, filtered int, update
 		return "", 0, nil, fmt.Errorf("got 0 Flats from url")
 	}
 
+	origMsgData := msgData.Copy()
+
 	// filter through local file (MVP)
 	sizeBefore := len(msgData.Flats)
 	msgData, err = flatstorage.FilterWithFlatStorage(msgData, chatID)
@@ -80,7 +82,7 @@ func GetFlats(chatID int64, blockID int64) (message string, filtered int, update
 	msg := msgData.String()
 
 	updateCallback = func() error {
-		_, err = flatstorage.UpdateFlatStorage(msgData, chatID)
+		_, err = flatstorage.UpdateFlatStorage(origMsgData, chatID)
 		return err
 	}
 

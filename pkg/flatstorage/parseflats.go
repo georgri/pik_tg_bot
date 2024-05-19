@@ -6,7 +6,10 @@ import (
 	"github.com/georgri/pik_tg_bot/pkg/util"
 	"sort"
 	"strings"
+	"time"
 )
+
+const FlatValidInterval = 60 * time.Minute
 
 // url example: https://flat.pik-service.ru/api/v1/filter/flat-by-block/1240?type=1,2&location=2,3&flatLimit=80&onlyFlats=1
 // source example:
@@ -76,6 +79,17 @@ func UnmarshallFlats(body []byte) (*MessageData, error) {
 	return res, nil
 }
 
+func (md *MessageData) Copy() *MessageData {
+	if md == nil {
+		return nil
+	}
+	newMsg := &MessageData{LastPage: md.LastPage, Flats: make([]Flat, 0, len(md.Flats))}
+	for _, flat := range md.Flats {
+		newMsg.Flats = append(newMsg.Flats, flat)
+	}
+	return newMsg
+}
+
 // String print in human readable telegram friendly format
 // example input:
 // {831859 32.6 19 {Нагатинская #ACADAF} 12756380 1 free
@@ -128,6 +142,14 @@ func (md *MessageData) GetBlockSlug() string {
 		return ""
 	}
 	return md.Flats[0].BlockSlug
+}
+
+func (f *Flat) RecentlyUpdated(now time.Time) bool {
+	t, err := time.Parse(time.RFC3339, f.Updated)
+	if err != nil {
+		return false
+	}
+	return now.Sub(t) < FlatValidInterval
 }
 
 // String example:

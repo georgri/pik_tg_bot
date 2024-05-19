@@ -6,6 +6,7 @@ import (
 	"github.com/georgri/pik_tg_bot/pkg/util"
 	"log"
 	"strings"
+	"time"
 )
 
 func sendHello(chatID int64, username string) {
@@ -54,7 +55,16 @@ func sendDump(chatID int64, slug string) {
 		return
 	}
 
+	// output recently updated only
+	now := time.Now()
+	allFlatsMessageData.Flats = util.FilterSliceInPlace(allFlatsMessageData.Flats, func(i int) bool {
+		return allFlatsMessageData.Flats[i].RecentlyUpdated(now)
+	})
+
 	msg := allFlatsMessageData.String()
+	if len(allFlatsMessageData.Flats) == 0 {
+		msg = fmt.Sprintf("No known flats for complex %v", slug)
+	}
 	err = SendMessage(chatID, msg)
 	if err != nil {
 		log.Printf("failed to send list of all blocks to chatID %v: %v", chatID, err)

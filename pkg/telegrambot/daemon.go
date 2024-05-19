@@ -56,6 +56,11 @@ func ProcessWithChannelInfo(channelInfo ChannelInfo) {
 		return
 	}
 
+	err = updateCallback()
+	if err != nil {
+		log.Printf("update callback failed in %v (chatID %v): %v", blockSlug, chatID, err)
+	}
+
 	if len(strings.TrimSpace(flats)) == 0 {
 		log.Printf("No new flats in %v (chatID %v), aborting; filtered %v", blockSlug, chatID, filtered)
 		return
@@ -67,10 +72,5 @@ func ProcessWithChannelInfo(channelInfo ChannelInfo) {
 	if err != nil {
 		log.Printf("error while sending message in %v (chatID %v): %v", blockSlug, chatID, err)
 		return
-	}
-
-	err = updateCallback()
-	if err != nil {
-		log.Printf("update callback failed in %v (chatID %v): %v", blockSlug, chatID, err)
 	}
 }
