@@ -23,7 +23,7 @@ type ChannelInfo struct {
 
 func init() {
 	// read file, append to hardcode
-	channels, err := ReadChannelsStorage(ChannelsFile)
+	channels, err := ReadChannelStorage(ChannelsFile)
 	if err != nil {
 		log.Printf("unable to read channels file: %v", err)
 		return
@@ -36,7 +36,7 @@ func init() {
 	}
 }
 
-func ReadChannelsStorage(fileName string) (*ChannelsFileData, error) {
+func ReadChannelStorage(fileName string) (*ChannelsFileData, error) {
 	chnData := &ChannelsFileData{}
 
 	content, err := os.ReadFile(fileName)

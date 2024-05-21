@@ -1,18 +1,27 @@
 package telegrambot
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
+	"os"
 	"strconv"
 	"strings"
 )
 
+const BlocksFile = "data/blocks.json"
+
 type BlockInfo struct {
-	ID   int64
-	Name string
-	Slug string
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+	Slug string `json:"slug"`
 }
 
 type BlockInfoMap map[string]BlockInfo
+
+type BlocksFileData struct {
+	BlockList []BlockInfo
+}
 
 var BlockSlugs BlockInfoMap
 
@@ -43,4 +52,50 @@ func GetBlockURLBySlug(slug string) string {
 
 func (b BlockInfo) String() string {
 	return fmt.Sprintf("%v: <a href=\"%v\">%v</a>", b.Name, GetBlockURLBySlug(b.Slug), b.Slug)
+}
+
+func init() {
+	// read file, append to hardcode
+	blocks, err := ReadBlockStorage(BlocksFile)
+	if err != nil {
+		log.Printf("unable to read blocks file: %v", err)
+		return
+	}
+
+	err = MergeBlocksWithHardcode(blocks)
+	if err != nil {
+		log.Printf("unable to merge blocks file into hardcode: %v", err)
+		return
+	}
+}
+
+func ReadBlockStorage(fileName string) (*BlocksFileData, error) {
+	blockData := &BlocksFileData{}
+
+	content, err := os.ReadFile(fileName)
+	if err != nil {
+		// TODO: handle error somehow?
+	} else {
+		// unmarshal the array into json
+		err = json.Unmarshal(content, &blockData.BlockList)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return blockData, nil
+}
+
+func MergeBlocksWithHardcode(blocks *BlocksFileData) error {
+	if blocks == nil {
+		return fmt.Errorf("nothing to merge into hardcode: blocks == nil")
+	}
+	if len(blocks.BlockList) == 0 {
+		return fmt.Errorf("nothing to merge into hardcode: block list is empty")
+	}
+	for _, block := range blocks.BlockList {
+		block.Slug = strings.TrimLeft(block.Slug, "/")
+		BlockSlugs[block.Slug] = block
+	}
+	return nil
 }
