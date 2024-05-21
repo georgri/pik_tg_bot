@@ -41,7 +41,7 @@ func ReadChannelStorage(fileName string) (*ChannelsFileData, error) {
 
 	content, err := os.ReadFile(fileName)
 	if err != nil {
-		// TODO: handle error somehow?
+		return nil, err
 	} else {
 		// unmarshal the map into json
 		err = json.Unmarshal(content, &chnData.ChannelsMap)

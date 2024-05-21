@@ -19,7 +19,7 @@ func ReadFlatStorage(fileName string) (*MessageData, error) {
 	// read all from file fileFlatStorage
 	content, err := os.ReadFile(fileName)
 	if err != nil {
-		// TODO: handle error somehow?
+		return nil, err
 	} else {
 		// unmarshal into json
 		err = json.Unmarshal(content, &msgData)

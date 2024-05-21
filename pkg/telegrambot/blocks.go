@@ -67,6 +67,8 @@ func init() {
 		log.Printf("unable to merge blocks file into hardcode: %v", err)
 		return
 	}
+
+	go UpdateBlocksForever()
 }
 
 func ReadBlockStorage(fileName string) (*BlocksFileData, error) {
@@ -74,7 +76,7 @@ func ReadBlockStorage(fileName string) (*BlocksFileData, error) {
 
 	content, err := os.ReadFile(fileName)
 	if err != nil {
-		// TODO: handle error somehow?
+		return nil, err
 	} else {
 		// unmarshal the array into json
 		err = json.Unmarshal(content, &blockData.BlockList)
@@ -96,6 +98,22 @@ func MergeBlocksWithHardcode(blocks *BlocksFileData) error {
 	for _, block := range blocks.BlockList {
 		block.Slug = strings.TrimLeft(block.Slug, "/")
 		BlockSlugs[block.Slug] = block
+	}
+	return nil
+}
+
+func SyncBlockStorageToFile() error {
+	blocks := &BlocksFileData{}
+	for _, block := range BlockSlugs {
+		blocks.BlockList = append(blocks.BlockList, block)
+	}
+	newContent, err := json.Marshal(blocks.BlockList)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(BlocksFile, newContent, 0644)
+	if err != nil {
+		return err
 	}
 	return nil
 }

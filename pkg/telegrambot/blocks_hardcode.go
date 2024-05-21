@@ -1,6 +1,5 @@
 package telegrambot
 
-// TODO: download from website
 var BlockSlugSlice = [][]string{
 	{"1401", "Первый Дубровский", "/1dubr"},
 	{"1240", "Второй Нагатинский", "/2ngt"},
