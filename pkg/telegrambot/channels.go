@@ -25,13 +25,13 @@ func init() {
 	// read file, append to hardcode
 	channels, err := ReadChannelsStorage(ChannelsFile)
 	if err != nil {
-		log.Fatalf("unable to read channels file: %v", err)
+		log.Printf("unable to read channels file: %v", err)
 		return
 	}
 
 	err = MergeChannelsWithHardcode(channels)
 	if err != nil {
-		log.Fatalf("unable to merge channels file into hardcode: %v", err)
+		log.Printf("unable to merge channels file into hardcode: %v", err)
 		return
 	}
 }
