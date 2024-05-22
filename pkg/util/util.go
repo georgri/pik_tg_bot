@@ -64,9 +64,11 @@ func FilterUnique[T, K comparable](arr []T, key func(int) K) []T {
 
 	size := 0
 	for i := range arr {
-		if _, ok := keys[key(i)]; !ok {
+		k := key(i)
+		if _, ok := keys[k]; !ok {
 			arr[i], arr[size] = arr[size], arr[i]
 			size += 1
+			keys[k] = struct{}{}
 		}
 	}
 
