@@ -24,12 +24,27 @@ func SendTestMessage(text string) error {
 }
 
 func SendMessage(chatID int64, text string) error {
+	return SendMessageWithPin(chatID, text, false)
+}
+
+func SendMessageWithPin(chatID int64, text string, mustPin bool) error {
 	token := util.GetBotToken()
 
 	chunks := SplitTextIntoSendableChunks(text)
 
-	for _, msg := range chunks {
-		err := SendMessageWithToken(token, chatID, msg)
+	var messageIDToDefer int64
+	for i, msg := range chunks {
+		messageID, err := SendMessageWithToken(token, chatID, msg)
+		if err != nil {
+			return err
+		}
+		if len(chunks) > 1 && i == 0 && mustPin {
+			messageIDToDefer = messageID
+		}
+	}
+
+	if mustPin && messageIDToDefer != 0 {
+		err := PinMessage(token, chatID, messageIDToDefer)
 		if err != nil {
 			return err
 		}
@@ -38,11 +53,61 @@ func SendMessage(chatID int64, text string) error {
 	return nil
 }
 
-type SendResponse struct {
-	OK bool `json:"ok"`
+type PinResponse struct {
+	OK          bool   `json:"ok"`
+	Result      bool   `json:"result"`
+	ErrorCode   int64  `json:"error_code"`
+	Description string `json:"description"`
 }
 
-func SendMessageWithToken(token string, chatID int64, text string) error {
+func PinMessage(token string, chatID int64, messageID int64) error {
+	pinMessageUrl := fmt.Sprintf("https://api.telegram.org/bot%v/pinChatMessage", token)
+
+	values := url.Values{
+		"chat_id":    []string{fmt.Sprintf("%v", chatID)},
+		"message_id": []string{fmt.Sprintf("%v", messageID)},
+		//"disable_notification": []string{"False"},
+	}
+
+	// post http request
+	resp, err := http.PostForm(pinMessageUrl, values)
+	if err != nil {
+		return err
+	}
+
+	if resp.ContentLength < 0 {
+		return fmt.Errorf("can't read body because content len < 0: %v", resp.Request.URL)
+	}
+
+	// example of response:
+	// {"ok":true"}}
+	body := make([]byte, resp.ContentLength)
+	_, err = resp.Body.Read(body)
+	if err != nil {
+		return fmt.Errorf("error while reading Body: %v", resp.Request.URL)
+	}
+
+	pinResponse := &PinResponse{}
+	err = json.Unmarshal(body, pinResponse)
+	if err != nil {
+		return fmt.Errorf("error while unmarshalling Body: %v", string(body))
+	}
+
+	if !pinResponse.OK || !pinResponse.Result {
+		return fmt.Errorf("pin response is not OK: %v", string(body))
+	}
+
+	return nil
+}
+
+type SendResponse struct {
+	OK     bool `json:"ok"`
+	Result struct {
+		MessageId int64 `json:"message_id"`
+	} `json:"result"`
+}
+
+func SendMessageWithToken(token string, chatID int64, text string) (int64, error) {
 
 	sendMessageUrl := fmt.Sprintf("https://api.telegram.org/bot%v/sendMessage", token)
 
@@ -55,11 +120,11 @@ func SendMessageWithToken(token string, chatID int64, text string) error {
 	// post http request
 	resp, err := http.PostForm(sendMessageUrl, values)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if resp.ContentLength < 0 {
-		return fmt.Errorf("can't read body because content len < 0: %v", resp.Request.URL)
+		return 0, fmt.Errorf("can't read body because content len < 0: %v", resp.Request.URL)
 	}
 
 	// example of response:
@@ -67,20 +132,20 @@ func SendMessageWithToken(token string, chatID int64, text string) error {
 	body := make([]byte, resp.ContentLength)
 	_, err = resp.Body.Read(body)
 	if err != nil {
-		return fmt.Errorf("error while reading Body: %v", resp.Request.URL)
+		return 0, fmt.Errorf("error while reading Body: %v", resp.Request.URL)
 	}
 
 	sendResponse := &SendResponse{}
 	err = json.Unmarshal(body, sendResponse)
 	if err != nil {
-		return fmt.Errorf("error while unmarshalling Body: %v", string(body))
+		return 0, fmt.Errorf("error while unmarshalling Body: %v", string(body))
 	}
 
 	if !sendResponse.OK {
-		return fmt.Errorf("send response is not OK: %v", string(body))
+		return 0, fmt.Errorf("send response is not OK: %v", string(body))
 	}
 
-	return nil
+	return sendResponse.Result.MessageId, nil
 }
 
 func SplitTextIntoSendableChunks(text string) []string {

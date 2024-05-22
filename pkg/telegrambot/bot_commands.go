@@ -65,7 +65,7 @@ func sendDump(chatID int64, slug string) {
 	if len(allFlatsMessageData.Flats) == 0 {
 		msg = fmt.Sprintf("No known flats for complex %v", slug)
 	}
-	err = SendMessage(chatID, msg)
+	err = SendMessageWithPin(chatID, msg, true)
 	if err != nil {
 		log.Printf("failed to send list of all blocks to chatID %v: %v", chatID, err)
 	}
