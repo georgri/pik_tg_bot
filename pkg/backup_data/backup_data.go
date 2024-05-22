@@ -64,7 +64,7 @@ func GetLastBackupFileName() (string, error) {
 	if len(filenames) == 0 {
 		return "", fmt.Errorf("no backup files yet")
 	}
-	return filenames[0], nil
+	return fmt.Sprintf("%v/%v", BackupFolder, filenames[0]), nil
 }
 
 func GetBackupFileList() ([]string, error) {
@@ -132,7 +132,10 @@ func BackupDataOnce() error {
 		return err
 	}
 
-	// TODO: upload last file to TG channel
+	err = SendLastBackupFile()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

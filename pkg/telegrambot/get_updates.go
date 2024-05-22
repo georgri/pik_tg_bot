@@ -94,7 +94,7 @@ func GetUpdatesForever() {
 
 func GetUpdatesOnce() (*BotUpdatesStruct, error) {
 
-	token := GetBotToken()
+	token := util.GetBotToken()
 
 	// test api address to read updates from:
 	// https://api.telegram.org/bot6819149165:AAEQWnUotV_YsGS7EPaNbUKZpcvKhsmOgNg/getUpdates

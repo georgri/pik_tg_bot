@@ -75,7 +75,7 @@ func GetStorageFileNameByBlockSlug(blockSlug string) (string, error) {
 	// guess chatID
 	// TODO: go with empty chatID
 	var chatID int64
-	for _, channel := range ChannelIDs[GetEnvType()] {
+	for _, channel := range ChannelIDs[util.GetEnvType()] {
 		if channel.BlockSlug == blockSlug {
 			chatID = channel.ChatID
 			break

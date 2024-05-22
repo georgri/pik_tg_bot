@@ -1,7 +1,9 @@
 package telegrambot
 
-var ChannelIDs = map[EnvType][]ChannelInfo{
-	EnvTypeDev: {
+import "github.com/georgri/pik_tg_bot/pkg/util"
+
+var ChannelIDs = map[util.EnvType][]ChannelInfo{
+	util.EnvTypeDev: {
 		{
 			ChatID:    TestChatID,
 			BlockSlug: "2ngt",
@@ -11,7 +13,7 @@ var ChannelIDs = map[EnvType][]ChannelInfo{
 			BlockSlug: "ytnv",
 		},
 	},
-	EnvTypeTesting: {
+	util.EnvTypeTesting: {
 		{
 			ChatID:    TestChatID,
 			BlockSlug: "2ngt",
@@ -21,7 +23,7 @@ var ChannelIDs = map[EnvType][]ChannelInfo{
 			BlockSlug: "ytnv",
 		},
 	},
-	EnvTypeProd: {
+	util.EnvTypeProd: {
 		{
 			ChatID:    -1001451631453,
 			BlockSlug: "2ngt",

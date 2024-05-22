@@ -3,6 +3,7 @@ package telegrambot
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/georgri/pik_tg_bot/pkg/util"
 	"net/http"
 	"net/url"
 	"strings"
@@ -23,7 +24,7 @@ func SendTestMessage(text string) error {
 }
 
 func SendMessage(chatID int64, text string) error {
-	token := GetBotToken()
+	token := util.GetBotToken()
 
 	chunks := SplitTextIntoSendableChunks(text)
 

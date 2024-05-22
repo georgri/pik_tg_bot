@@ -3,6 +3,7 @@ package telegrambot
 import (
 	"github.com/georgri/pik_tg_bot/pkg/backup_data"
 	"github.com/georgri/pik_tg_bot/pkg/downloader"
+	"github.com/georgri/pik_tg_bot/pkg/util"
 	"log"
 	"os"
 	"strings"
@@ -41,7 +42,7 @@ func RunForever() {
 }
 
 func RunOnce() {
-	envType := GetEnvType()
+	envType := util.GetEnvType()
 
 	for _, channelInfo := range ChannelIDs[envType] {
 		ProcessWithChannelInfo(channelInfo)

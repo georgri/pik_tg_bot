@@ -61,7 +61,7 @@ func MergeChannelsWithHardcode(channels *ChannelsFileData) error {
 		return fmt.Errorf("nothing to merge into hardcode: channel map is empty")
 	}
 	for envTypeStr, channelList := range channels.ChannelsMap {
-		envType, ok := EnvTypeFromString[envTypeStr]
+		envType, ok := util.EnvTypeFromString[envTypeStr]
 		if !ok {
 			return fmt.Errorf("unknown envtype: %v", envTypeStr)
 		}
