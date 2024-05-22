@@ -1,6 +1,7 @@
 package telegrambot
 
 import (
+	"github.com/georgri/pik_tg_bot/pkg/backup_data"
 	"github.com/georgri/pik_tg_bot/pkg/downloader"
 	"log"
 	"os"
@@ -30,6 +31,8 @@ func RunForever() {
 	log.SetOutput(f)
 
 	go GetUpdatesForever()
+
+	go backup_data.BackupDataForever()
 
 	for {
 		RunOnce()

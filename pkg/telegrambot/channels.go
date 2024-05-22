@@ -69,7 +69,7 @@ func MergeChannelsWithHardcode(channels *ChannelsFileData) error {
 		oldList := ChannelIDs[envType]
 		oldList = append(oldList, channelList...)
 
-		util.FilterUnique(oldList, func(i int) string {
+		oldList = util.FilterUnique(oldList, func(i int) string {
 			return fmt.Sprintf("%v_%v", oldList[i].BlockSlug, oldList[i].ChatID)
 		})
 
