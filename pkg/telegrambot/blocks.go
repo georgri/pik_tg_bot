@@ -62,13 +62,11 @@ func init() {
 		return
 	}
 
-	err = MergeBlocksWithHardcode(blocks)
+	_, err = MergeBlocksWithHardcode(blocks)
 	if err != nil {
 		log.Printf("unable to merge blocks file into hardcode: %v", err)
 		return
 	}
-
-	go UpdateBlocksForever()
 }
 
 func ReadBlockStorage(fileName string) (*BlocksFileData, error) {
@@ -88,18 +86,22 @@ func ReadBlockStorage(fileName string) (*BlocksFileData, error) {
 	return blockData, nil
 }
 
-func MergeBlocksWithHardcode(blocks *BlocksFileData) error {
+func MergeBlocksWithHardcode(blocks *BlocksFileData) ([]BlockInfo, error) {
 	if blocks == nil {
-		return fmt.Errorf("nothing to merge into hardcode: blocks == nil")
+		return nil, fmt.Errorf("nothing to merge into hardcode: blocks == nil")
 	}
 	if len(blocks.BlockList) == 0 {
-		return fmt.Errorf("nothing to merge into hardcode: block list is empty")
+		return nil, fmt.Errorf("nothing to merge into hardcode: block list is empty")
 	}
+	var newBlocks []BlockInfo
 	for _, block := range blocks.BlockList {
 		block.Slug = strings.TrimLeft(block.Slug, "/")
+		if _, ok := BlockSlugs[block.Slug]; !ok {
+			newBlocks = append(newBlocks, block)
+		}
 		BlockSlugs[block.Slug] = block
 	}
-	return nil
+	return newBlocks, nil
 }
 
 func SyncBlockStorageToFile() error {

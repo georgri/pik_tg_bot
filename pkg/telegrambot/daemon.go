@@ -31,9 +31,11 @@ func RunForever() {
 
 	log.SetOutput(f)
 
-	go GetUpdatesForever()
-
 	go backup_data.BackupDataForever()
+
+	go UpdateBlocksForever()
+
+	go GetUpdatesForever()
 
 	for {
 		RunOnce()

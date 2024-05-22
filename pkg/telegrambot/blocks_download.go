@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/georgri/pik_tg_bot/pkg/downloader"
+	"github.com/georgri/pik_tg_bot/pkg/util"
 	"log"
+	"sort"
 	"strings"
 	"time"
 )
@@ -53,27 +55,82 @@ func DownloadBlocks() (*BlocksFileData, error) {
 
 func UpdateBlocksForever() {
 	for {
-		UpdateBlocksOnce()
+		err := UpdateBlocksOnce()
+		if err != nil {
+			log.Printf("update blocks failed: %v", err)
+		}
 		time.Sleep(UpdateBlocksEvery)
 	}
 }
 
-func UpdateBlocksOnce() {
+func UpdateBlocksOnce() error {
 	blocks, err := DownloadBlocks()
 	if err != nil {
-		log.Printf("unable to download blocks: %v", err)
-		return
+		return fmt.Errorf("unable to download blocks: %v", err)
 	}
 
-	err = MergeBlocksWithHardcode(blocks)
+	newBlocks, err := MergeBlocksWithHardcode(blocks)
 	if err != nil {
-		log.Printf("unable to merge downloaded blocks: %v", err)
-		return
+		return fmt.Errorf("unable to merge downloaded blocks: %v", err)
 	}
 
 	err = SyncBlockStorageToFile()
 	if err != nil {
-		log.Printf("unable to sync blocks to file: %v", err)
-		return
+		return fmt.Errorf("unable to sync blocks to file: %v", err)
 	}
+
+	err = NotifyAboutNewBlocks(newBlocks)
+	if err != nil {
+		return fmt.Errorf("unable to notify about new blocks: %v", err)
+	}
+
+	return nil
+}
+
+// NotifyAboutNewBlocks notifies all known chats about the new projects
+func NotifyAboutNewBlocks(newBlocks []BlockInfo) error {
+	if len(newBlocks) == 0 {
+		return nil
+	}
+
+	sort.Slice(newBlocks, func(i, j int) bool {
+		return newBlocks[i].Slug < newBlocks[j].Slug
+	})
+
+	var res []string
+	res = append(res, "#NewPikProjects\n")
+	for _, block := range newBlocks {
+		res = append(res, block.String())
+	}
+	res = append(res, "\nTo follow new updates, ask @georgri")
+	msg := strings.Join(res, "\n")
+
+	err := SendToAllKnownChats(msg)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func SendToAllKnownChats(msg string) error {
+	chatIDs := GetAllKnownChatIDs()
+	for _, chatID := range chatIDs {
+		err := SendMessage(chatID, msg)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func GetAllKnownChatIDs() []int64 {
+	var res []int64
+	for _, chat := range ChannelIDs[util.GetEnvType()] {
+		res = append(res, chat.ChatID)
+	}
+	res = util.FilterUnique(res, func(i int) int64 {
+		return res[i]
+	})
+	return res
 }
