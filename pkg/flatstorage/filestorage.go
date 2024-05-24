@@ -2,6 +2,7 @@ package flatstorage
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/georgri/pik_tg_bot/pkg/util"
 	"os"
@@ -131,16 +132,21 @@ func UpdateFlatStorage(msg *MessageData, chatID int64) (numUpdated int, err erro
 
 	numUpdated = len(msg.Flats)
 
+	newStorageFileName := GetStorageFileNameByEnv(msg)
 	newContent, err := json.Marshal(oldMessageData)
 	if err != nil {
 		return 0, err
 	}
-	err = os.WriteFile(storageFileName, newContent, 0644)
+	err = os.WriteFile(newStorageFileName, newContent, 0644)
 	if err != nil {
 		return 0, err
 	}
 
 	return numUpdated, nil
+}
+func GetStorageFileNameByEnv(msg *MessageData) string {
+	blockSlug := msg.GetBlockSlug()
+	return GetStorageFileNameByBlockSlugAndEnv(blockSlug)
 }
 
 func GetStorageFileName(msg *MessageData, chatID int64) string {
@@ -148,6 +154,15 @@ func GetStorageFileName(msg *MessageData, chatID int64) string {
 	return GetStorageFileNameByBlockSlugAndChatID(blockSlug, chatID)
 }
 
+func GetStorageFileNameByBlockSlugAndEnv(blockSlug string) string {
+	return fmt.Sprintf("%v/%v_%v.%v", storageDir, blockSlug, util.GetEnvType().String(), storageFormat)
+}
+
 func GetStorageFileNameByBlockSlugAndChatID(blockSlug string, chatID int64) string {
+	// First, try find file without any chatID but with envtype
+	targetFileName := GetStorageFileNameByBlockSlugAndEnv(blockSlug)
+	if _, err := os.Stat(targetFileName); !errors.Is(err, os.ErrNotExist) {
+		return targetFileName
+	}
 	return fmt.Sprintf("%v/%v_%v.%v", storageDir, blockSlug, chatID, storageFormat)
 }

@@ -27,3 +27,12 @@ func GetEnvType() EnvType {
 	envType, _ := EnvTypeFromString[RootEnvType]
 	return envType
 }
+
+func (e EnvType) String() string {
+	for key, v := range EnvTypeFromString {
+		if v == e {
+			return key
+		}
+	}
+	return "unknown"
+}
