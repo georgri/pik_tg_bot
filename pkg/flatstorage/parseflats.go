@@ -166,8 +166,12 @@ func (f *Flat) String() string {
 	rooms := f.Rooms
 	floor := f.Floor
 	price := util.ThousandSep(f.Price, " ")
+	var reserve string
+	if f.Status == "reserve" {
+		reserve = "🔒"
+	}
 
-	res := fmt.Sprintf("%v: <a href=\"%v\">%vr, %vm2</a>, %vR, f%v", corp, flatURL, rooms, area, price, floor)
+	res := fmt.Sprintf("%v: <a href=\"%v\">%vr, %vm2</a>, %vR, f%v%v", corp, flatURL, rooms, area, price, floor, reserve)
 
 	return res
 }
