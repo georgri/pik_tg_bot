@@ -46,17 +46,27 @@ func RunForever() {
 func RunOnce() {
 	envType := util.GetEnvType()
 
+	// 1. Get map of block slug => subscribed channels
+	// 2. Update block slug
+	// 3. Send info to all subscribed channels
+
+	slugs := make(map[string][]int64, 10)
+
 	for _, channelInfo := range ChannelIDs[envType] {
-		ProcessWithChannelInfo(channelInfo)
+		slugs[channelInfo.BlockSlug] = append(slugs[channelInfo.BlockSlug], channelInfo.ChatID)
+	}
+	for slug, chatIDs := range slugs {
+		ProcessWithSlugAndChatIDs(slug, chatIDs)
 	}
 }
 
-func ProcessWithChannelInfo(channelInfo ChannelInfo) {
-	chatID := channelInfo.ChatID
-	blockSlug := channelInfo.BlockSlug
+func ProcessWithSlugAndChatIDs(blockSlug string, chatIDs []int64) {
 	blockID := GetBlockIDBySlug(blockSlug)
 
-	flats, filtered, updateCallback, err := downloader.GetFlats(chatID, blockID)
+	envtype := util.GetEnvType().String()
+
+	// TODO: get rid of chatIDs[0] after safe migration
+	flats, filtered, updateCallback, err := downloader.GetFlats(chatIDs[0], blockID)
 	if err != nil {
 		log.Printf("error getting response from pik.ru: %v", err)
 		return
@@ -64,19 +74,21 @@ func ProcessWithChannelInfo(channelInfo ChannelInfo) {
 
 	err = updateCallback()
 	if err != nil {
-		log.Printf("update callback failed in %v (chatID %v): %v", blockSlug, chatID, err)
+		log.Printf("update callback failed in %v (envtype %v): %v", blockSlug, envtype, err)
 	}
 
 	if len(strings.TrimSpace(flats)) == 0 {
-		log.Printf("No new flats in %v (chatID %v), aborting; filtered %v", blockSlug, chatID, filtered)
+		log.Printf("No new flats in %v (envtype %v), aborting; filtered %v", blockSlug, envtype, filtered)
 		return
 	}
 
-	log.Printf("Got flats in %v (chatID %v): %v", blockSlug, chatID, flats)
+	log.Printf("Got flats in %v (envtype %v): %v", blockSlug, envtype, flats)
 
-	err = SendMessage(chatID, flats)
-	if err != nil {
-		log.Printf("error while sending message in %v (chatID %v): %v", blockSlug, chatID, err)
-		return
+	for _, chatID := range chatIDs {
+		err = SendMessage(chatID, flats)
+		if err != nil {
+			log.Printf("error while sending message in %v (chatID %v): %v", blockSlug, chatID, err)
+			return
+		}
 	}
 }
