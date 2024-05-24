@@ -102,7 +102,7 @@ func NotifyAboutNewBlocks(newBlocks []BlockInfo) error {
 	for _, block := range newBlocks {
 		res = append(res, block.String())
 	}
-	res = append(res, "\nTo follow new updates, ask @georgri")
+	res = append(res, "\nTo follow new updates, write @pik_checker_bot")
 	msg := strings.Join(res, "\n")
 
 	err := SendToAllKnownChats(msg)
