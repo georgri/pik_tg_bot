@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -160,13 +161,19 @@ func processUpdate(update *UpdateStruct) {
 		}
 		offset, length := entity.Offset, entity.Length
 		command := update.Message.Text[offset : offset+length]
+
+		args := update.Message.Text[offset+length:]
+		if strings.Contains(command, "_") {
+			command, args, _ = strings.Cut(command, "_")
+		}
+		args = strings.ReplaceAll(args, "_", "/")
 		switch command {
 		case "/hello":
 			sendHello(update.Message.Chat.Id, update.Message.From.Username)
 		case "/list":
 			sendList(update.Message.Chat.Id)
 		case "/dump":
-			sendDump(update.Message.Chat.Id, update.Message.Text[offset+length:])
+			sendDump(update.Message.Chat.Id, args)
 		}
 	}
 }
