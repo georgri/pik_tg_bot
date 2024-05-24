@@ -54,6 +54,14 @@ func (b BlockInfo) String() string {
 	return fmt.Sprintf("%v: <a href=\"%v\">%v</a>", b.Name, GetBlockURLBySlug(b.Slug), b.Slug)
 }
 
+func (b BlockInfo) StringWithSub(subscribed bool) string {
+	embeddedSlug := embedSlug(b.Slug)
+	if subscribed {
+		return fmt.Sprintf("✅<a href=\"%v\">%v</a> /%v_%v", GetBlockURLBySlug(b.Slug), b.Name, UnsubscribeCommand, embeddedSlug)
+	}
+	return fmt.Sprintf("<a href=\"%v\">%v</a> /%v_%v", GetBlockURLBySlug(b.Slug), b.Name, SubscribeCommand, embeddedSlug)
+}
+
 func init() {
 	// read file, append to hardcode
 	blocks, err := ReadBlockStorage(BlocksFile)

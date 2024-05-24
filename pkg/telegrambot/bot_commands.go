@@ -24,15 +24,30 @@ func sendHello(chatID int64, username string) {
 }
 
 func sendList(chatID int64) {
+
+	subscribedTo := GetChatSubscriptions(chatID)
+
 	var complexes []string
 	for _, comp := range util.SortedKeys(BlockSlugs) {
-		complexes = append(complexes, BlockSlugs[comp].String())
+		isSubscribed := subscribedTo[comp]
+		complexes = append(complexes, BlockSlugs[comp].StringWithSub(isSubscribed))
 	}
 	msg := fmt.Sprintf("List of known complexes:\n") + strings.Join(complexes, "\n")
 	err := SendMessage(chatID, msg)
 	if err != nil {
 		log.Printf("failed to send list of all blocks to chatID %v: %v", chatID, err)
 	}
+}
+
+func GetChatSubscriptions(chatID int64) map[string]bool {
+	envtype := util.GetEnvType()
+	res := make(map[string]bool, 10)
+	for _, channel := range ChannelIDs[envtype] {
+		if channel.ChatID == chatID {
+			res[channel.BlockSlug] = true
+		}
+	}
+	return res
 }
 
 func validateSlug(chatID int64, slug string, command string) (string, error) {
