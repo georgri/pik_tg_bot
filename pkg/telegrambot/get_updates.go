@@ -160,20 +160,25 @@ func processUpdate(update *UpdateStruct) {
 			continue
 		}
 		offset, length := entity.Offset, entity.Length
-		command := update.Message.Text[offset : offset+length]
+		command := strings.TrimLeft(update.Message.Text[offset:offset+length], "/")
 
 		args := update.Message.Text[offset+length:]
 		if strings.Contains(command, "_") {
 			command, args, _ = strings.Cut(command, "_")
 		}
-		args = strings.ReplaceAll(args, "_", "/")
+		args = unEmbedSlug(args)
 		switch command {
-		case "/hello":
+		case "hello":
 			sendHello(update.Message.Chat.Id, update.Message.From.Username)
-		case "/list":
+		case "list":
 			sendList(update.Message.Chat.Id)
-		case "/dump":
+		case DumpCommand:
 			sendDump(update.Message.Chat.Id, args)
+		case SubscribeCommand:
+			subscribeChat(update.Message.Chat.Id, args)
+		case UnsubscribeCommand:
+			unsubscribeChat(update.Message.Chat.Id, args)
 		}
+
 	}
 }

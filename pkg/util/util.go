@@ -75,6 +75,11 @@ func FilterUnique[T, K comparable](arr []T, key func(int) K) []T {
 	return arr[:size]
 }
 
+func RemoveSliceElement[T any](s []T, i int) []T {
+	s[i] = s[len(s)-1]
+	return s[:len(s)-1]
+}
+
 func Max[T constraints.Ordered](a, b T) T {
 	if a > b {
 		return a
