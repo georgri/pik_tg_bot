@@ -10,6 +10,8 @@ import (
 )
 
 const (
+	FileMaxUpdatePeriod = 10 * time.Minute
+
 	storageDir    = "data"
 	storageFormat = "json"
 )
@@ -178,4 +180,14 @@ func GetStorageFileNameByBlockSlugAndChatID(blockSlug string, chatID int64) stri
 func FileExists(filename string) bool {
 	_, err := os.Stat(filename)
 	return !errors.Is(err, os.ErrNotExist)
+}
+
+func FileNotUpdated(filename string) bool {
+	stat, err := os.Stat(filename)
+	if err != nil {
+		return true
+	}
+	now := time.Now()
+	fileModified := stat.ModTime()
+	return now.Sub(fileModified) > FileMaxUpdatePeriod
 }

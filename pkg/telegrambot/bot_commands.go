@@ -49,18 +49,12 @@ func sendDump(chatID int64, slug string) {
 
 	// send all known flats for complex with slug "slug"
 	fileName, err := GetStorageFileNameByBlockSlug(slug)
-	if !flatstorage.FileExists(fileName) {
-		// update flats into a new file
+	if !flatstorage.FileExists(fileName) || flatstorage.FileNotUpdated(fileName) {
+		// force update flats into file
 		msg, err = DownloadAndUpdateFile(slug, 0)
 		if err != nil {
 			log.Printf("failed to download/update flats for slug %v: %v", slug, err)
 			return
-		}
-
-		// add to subscribers (to update the file regularly)
-		err = AddNewSubscriber(slug, chatID)
-		if err != nil {
-			log.Printf("failed to add a new subscriber for slug %v: %v", slug, err)
 		}
 	} else {
 		allFlatsMessageData, err := flatstorage.ReadFlatStorage(fileName)
