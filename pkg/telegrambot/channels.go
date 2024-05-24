@@ -11,8 +11,10 @@ import (
 const ChannelsFile = "data/channels.json"
 
 type ChannelsFileData struct {
-	ChannelsMap map[string]ChannelFileList
+	ChannelsMap ChannelsFileMap
 }
+
+type ChannelsFileMap map[string]ChannelFileList
 
 type ChannelFileList []ChannelInfo
 
@@ -74,6 +76,24 @@ func MergeChannelsWithHardcode(channels *ChannelsFileData) error {
 		})
 
 		ChannelIDs[envType] = oldList
+	}
+	return nil
+}
+
+func SyncChannelStorageToFile() error {
+	channelsFile := &ChannelsFileData{
+		ChannelsMap: make(ChannelsFileMap, 10),
+	}
+	for envtype, channels := range ChannelIDs {
+		channelsFile.ChannelsMap[envtype.String()] = channels
+	}
+	newContent, err := json.Marshal(channelsFile.ChannelsMap)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(ChannelsFile, newContent, 0644)
+	if err != nil {
+		return err
 	}
 	return nil
 }

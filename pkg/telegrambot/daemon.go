@@ -1,6 +1,7 @@
 package telegrambot
 
 import (
+	"fmt"
 	"github.com/georgri/pik_tg_bot/pkg/backup_data"
 	"github.com/georgri/pik_tg_bot/pkg/downloader"
 	"github.com/georgri/pik_tg_bot/pkg/util"
@@ -61,28 +62,11 @@ func RunOnce() {
 }
 
 func ProcessWithSlugAndChatIDs(blockSlug string, chatIDs []int64) {
-	blockID := GetBlockIDBySlug(blockSlug)
-
-	envtype := util.GetEnvType().String()
-
-	// TODO: get rid of chatIDs[0] after safe migration
-	flats, filtered, updateCallback, err := downloader.GetFlats(chatIDs[0], blockID)
+	flats, err := DownloadAndUpdateFile(blockSlug, chatIDs[0])
 	if err != nil {
-		log.Printf("error getting response from pik.ru: %v", err)
+		log.Printf("error while updating flats: %v", err)
 		return
 	}
-
-	err = updateCallback()
-	if err != nil {
-		log.Printf("update callback failed in %v (envtype %v): %v", blockSlug, envtype, err)
-	}
-
-	if len(strings.TrimSpace(flats)) == 0 {
-		log.Printf("No new flats in %v (envtype %v), aborting; filtered %v", blockSlug, envtype, filtered)
-		return
-	}
-
-	log.Printf("Got flats in %v (envtype %v): %v", blockSlug, envtype, flats)
 
 	for _, chatID := range chatIDs {
 		err = SendMessage(chatID, flats)
@@ -91,4 +75,29 @@ func ProcessWithSlugAndChatIDs(blockSlug string, chatIDs []int64) {
 			return
 		}
 	}
+}
+
+func DownloadAndUpdateFile(blockSlug string, chatID int64) (string, error) {
+	blockID := GetBlockIDBySlug(blockSlug)
+
+	envtype := util.GetEnvType().String()
+
+	// TODO: get rid of chatIDs[0] after safe migration
+	flats, filtered, updateCallback, err := downloader.GetFlats(chatID, blockID)
+	if err != nil {
+		return "", fmt.Errorf("error getting response from pik.ru: %v", err)
+	}
+
+	err = updateCallback()
+	if err != nil {
+		return "", fmt.Errorf("update callback failed in %v (envtype %v): %v", blockSlug, envtype, err)
+	}
+
+	if len(strings.TrimSpace(flats)) == 0 {
+		return "", fmt.Errorf("no new flats in %v (envtype %v), aborting; filtered %v", blockSlug, envtype, filtered)
+	}
+
+	log.Printf("Got flats in %v (envtype %v): %v", blockSlug, envtype, flats)
+
+	return flats, nil
 }

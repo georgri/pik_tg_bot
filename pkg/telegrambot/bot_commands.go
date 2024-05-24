@@ -31,7 +31,11 @@ func sendList(chatID int64) {
 
 func sendDump(chatID int64, slug string) {
 
-	if len(slug) == 0 {
+	slug = strings.TrimLeft(strings.TrimSpace(slug), "/")
+
+	_, slugIsValid := BlockSlugs[slug]
+
+	if len(slug) == 0 || !slugIsValid {
 		// send help message
 		err := SendMessage(chatID, "usage: /dump [code]\nTo get [code] of any complex type /list")
 		if err != nil {
@@ -41,30 +45,42 @@ func sendDump(chatID int64, slug string) {
 		return
 	}
 
+	var msg string
+
 	// send all known flats for complex with slug "slug"
-	slug = strings.TrimLeft(strings.TrimSpace(slug), "/")
 	fileName, err := GetStorageFileNameByBlockSlug(slug)
-	if err != nil {
-		log.Printf("failed to get filename for blockslug %v: %v", slug, err)
-		return
+	if !flatstorage.FileExists(fileName) {
+		// update flats into a new file
+		msg, err = DownloadAndUpdateFile(slug, 0)
+		if err != nil {
+			log.Printf("failed to download/update flats for slug %v: %v", slug, err)
+			return
+		}
+
+		// add to subscribers (to update the file regularly)
+		err = AddNewSubscriber(slug, chatID)
+		if err != nil {
+			log.Printf("failed to add a new subscriber for slug %v: %v", slug, err)
+		}
+	} else {
+		allFlatsMessageData, err := flatstorage.ReadFlatStorage(fileName)
+		if err != nil {
+			log.Printf("failed to read file with flats %v: %v", fileName, err)
+			return
+		}
+
+		// output recently updated only
+		now := time.Now()
+		allFlatsMessageData.Flats = util.FilterSliceInPlace(allFlatsMessageData.Flats, func(i int) bool {
+			return allFlatsMessageData.Flats[i].RecentlyUpdated(now)
+		})
+
+		msg = allFlatsMessageData.String()
+		if len(allFlatsMessageData.Flats) == 0 {
+			msg = fmt.Sprintf("No known flats for complex %v", slug)
+		}
 	}
 
-	allFlatsMessageData, err := flatstorage.ReadFlatStorage(fileName)
-	if err != nil {
-		log.Printf("failed to read file with flats %v: %v", fileName, err)
-		return
-	}
-
-	// output recently updated only
-	now := time.Now()
-	allFlatsMessageData.Flats = util.FilterSliceInPlace(allFlatsMessageData.Flats, func(i int) bool {
-		return allFlatsMessageData.Flats[i].RecentlyUpdated(now)
-	})
-
-	msg := allFlatsMessageData.String()
-	if len(allFlatsMessageData.Flats) == 0 {
-		msg = fmt.Sprintf("No known flats for complex %v", slug)
-	}
 	err = SendMessageWithPin(chatID, msg, true)
 	if err != nil {
 		log.Printf("failed to send list of all blocks to chatID %v: %v", chatID, err)
@@ -85,4 +101,14 @@ func GetStorageFileNameByBlockSlug(blockSlug string) (string, error) {
 		return "", fmt.Errorf("yet unknown block slug: %v", blockSlug)
 	}
 	return flatstorage.GetStorageFileNameByBlockSlugAndChatID(blockSlug, chatID), nil
+}
+
+func AddNewSubscriber(slug string, chatID int64) error {
+	envtype := util.GetEnvType()
+	ChannelIDs[envtype] = append(ChannelIDs[envtype], ChannelInfo{
+		ChatID:    chatID,
+		BlockSlug: slug,
+	})
+
+	return SyncChannelStorageToFile()
 }

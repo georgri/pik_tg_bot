@@ -17,6 +17,10 @@ const (
 func ReadFlatStorage(fileName string) (*MessageData, error) {
 	msgData := &MessageData{}
 
+	if !FileExists(fileName) {
+		return msgData, nil
+	}
+
 	// read all from file fileFlatStorage
 	content, err := os.ReadFile(fileName)
 	if err != nil {
@@ -161,8 +165,17 @@ func GetStorageFileNameByBlockSlugAndEnv(blockSlug string) string {
 func GetStorageFileNameByBlockSlugAndChatID(blockSlug string, chatID int64) string {
 	// First, try find file without any chatID but with envtype
 	targetFileName := GetStorageFileNameByBlockSlugAndEnv(blockSlug)
-	if _, err := os.Stat(targetFileName); !errors.Is(err, os.ErrNotExist) {
+	if FileExists(targetFileName) {
 		return targetFileName
 	}
-	return fmt.Sprintf("%v/%v_%v.%v", storageDir, blockSlug, chatID, storageFormat)
+	fileNameWithChatID := fmt.Sprintf("%v/%v_%v.%v", storageDir, blockSlug, chatID, storageFormat)
+	if FileExists(fileNameWithChatID) {
+		return fileNameWithChatID
+	}
+	return targetFileName
+}
+
+func FileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	return !errors.Is(err, os.ErrNotExist)
 }
