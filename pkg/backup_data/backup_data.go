@@ -64,7 +64,7 @@ func GetLastBackupFileName() (string, error) {
 	if len(filenames) == 0 {
 		return "", fmt.Errorf("no backup files yet")
 	}
-	return fmt.Sprintf("%v/%v", BackupFolder, filenames[0]), nil
+	return filenames[0], nil
 }
 
 func GetBackupFileList() ([]string, error) {
@@ -80,7 +80,7 @@ func GetBackupFileList() ([]string, error) {
 		if !BackupFileRegexp.MatchString(filename) {
 			continue
 		}
-		filenames = append(filenames, filename)
+		filenames = append(filenames, fmt.Sprintf("%v/%v", BackupFolder, filename))
 	}
 
 	sort.Slice(filenames, func(i, j int) bool {
