@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/georgri/pik_tg_bot/pkg/util"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -37,6 +38,9 @@ type Flat struct {
 	BlockSlug string `json:"blockSlug"`
 	Created   string `json:"created,omitempty"` // when the flat first appeared
 	Updated   string `json:"updated,omitempty"` // when the flat was last seen (to filter out the old ones)
+
+	FinishType     int8   `json:"finishType"`
+	SettlementDate string `json:"settlementDate"`
 }
 
 type MessageData struct {
@@ -171,7 +175,35 @@ func (f *Flat) String() string {
 		reserve = "🔒"
 	}
 
-	res := fmt.Sprintf("%v: <a href=\"%v\">%vr, %vm2</a>, %vR, f%v%v", corp, flatURL, rooms, area, price, floor, reserve)
+	settlementQuarter := GetSettlementQuarter(f.SettlementDate)
+
+	finishTypeString := GetFinishTypeString(f.FinishType)
+
+	res := fmt.Sprintf("%v: <a href=\"%v\">%vr, %vm2</a>, %vR, f%v%v, %v, %v", corp, flatURL, rooms, area, price, floor, reserve, settlementQuarter, finishTypeString)
 
 	return res
+}
+
+// ex 2025-06-15 => 25Q3
+func GetSettlementQuarter(settlementDate string) string {
+	if len(settlementDate) < 10 {
+		return "сдан"
+	}
+	year := settlementDate[:4]
+	month, err := strconv.Atoi(settlementDate[5:7])
+	if err != nil {
+		return year
+	}
+	quarter := ((month - 1) / 3) + 1
+	year = year[2:]
+	return fmt.Sprintf("%vQ%v", year, quarter)
+}
+
+func GetFinishTypeString(finishType int8) string {
+	if finishType == 1 {
+		return "отделка"
+	} else if finishType == 2 {
+		return "whitebox"
+	}
+	return "без отделки"
 }
