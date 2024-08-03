@@ -178,9 +178,9 @@ func processUpdate(update *UpdateStruct) {
 		case "hello":
 			sendHello(update.Message.Chat.Id, update.Message.From.Username)
 		case "list":
-			sendList(update.Message.Chat.Id)
+			sendList(update.Message.Chat.Id, false)
 		case "start":
-			sendList(update.Message.Chat.Id)
+			sendList(update.Message.Chat.Id, false)
 		case DumpCommand:
 			sendDump(update.Message.Chat.Id, args)
 		case SubscribeCommand:

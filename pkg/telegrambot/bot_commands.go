@@ -23,7 +23,7 @@ func sendHello(chatID int64, username string) {
 	}
 }
 
-func sendList(chatID int64) {
+func sendList(chatID int64, dump bool) {
 
 	subscribedTo := GetChatSubscriptions(chatID)
 
@@ -31,8 +31,12 @@ func sendList(chatID int64) {
 	for _, comp := range util.SortedKeysByFunc(BlockSlugs, func(a, b string) bool {
 		return BlockSlugs[a].Name < BlockSlugs[b].Name
 	}) {
-		isSubscribed := subscribedTo[comp]
-		complexes = append(complexes, BlockSlugs[comp].StringWithSub(isSubscribed))
+		if dump {
+			complexes = append(complexes, BlockSlugs[comp].StringWithCommand(DumpCommand))
+		} else {
+			isSubscribed := subscribedTo[comp]
+			complexes = append(complexes, BlockSlugs[comp].StringWithSub(isSubscribed))
+		}
 	}
 	msg := fmt.Sprintf("List of known complexes:\n") + strings.Join(complexes, "\n")
 	err := SendMessage(chatID, msg)
@@ -58,11 +62,7 @@ func validateSlug(chatID int64, slug string, command string) (string, error) {
 	_, slugIsValid := BlockSlugs[slug]
 
 	if len(slug) == 0 || !slugIsValid {
-		// send help message
-		err := SendMessage(chatID, fmt.Sprintf("usage: /%v [code]\n\nTo get [code] of any complex type /list", command))
-		if err != nil {
-			return "", fmt.Errorf("failed to send /%v help message: %v", command, err)
-		}
+		sendList(chatID, command == DumpCommand)
 		return "", fmt.Errorf("slug is empty or invalid: %v", slug)
 	}
 	return slug, nil

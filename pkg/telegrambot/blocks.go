@@ -56,11 +56,19 @@ func (b BlockInfo) String() string {
 }
 
 func (b BlockInfo) StringWithSub(subscribed bool) string {
-	embeddedSlug := embedSlug(b.Slug)
 	if subscribed {
-		return fmt.Sprintf("✅<a href=\"%v\">%v</a> %v", GetBlockURLBySlug(b.Slug), b.Name, GetEmbeddedCommand(UnsubscribeCommand, embeddedSlug))
+		return b.StringWithCommand(UnsubscribeCommand)
 	}
-	return fmt.Sprintf("<a href=\"%v\">%v</a> %v", GetBlockURLBySlug(b.Slug), b.Name, GetEmbeddedCommand(SubscribeCommand, embeddedSlug))
+	return b.StringWithCommand(SubscribeCommand)
+}
+
+func (b BlockInfo) StringWithCommand(command string) string {
+	var prefix string
+	if command == UnsubscribeCommand {
+		prefix = "✅"
+	}
+	embeddedSlug := embedSlug(b.Slug)
+	return fmt.Sprintf("%v<a href=\"%v\">%v</a> %v", prefix, GetBlockURLBySlug(b.Slug), b.Name, GetEmbeddedCommand(command, embeddedSlug))
 }
 
 func GetEmbeddedCommand(command, slug string) string {
