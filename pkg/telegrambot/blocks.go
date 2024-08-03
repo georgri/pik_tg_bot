@@ -3,6 +3,7 @@ package telegrambot
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/georgri/pik_tg_bot/pkg/util"
 	"log"
 	"os"
 	"strconv"
@@ -57,9 +58,13 @@ func (b BlockInfo) String() string {
 func (b BlockInfo) StringWithSub(subscribed bool) string {
 	embeddedSlug := embedSlug(b.Slug)
 	if subscribed {
-		return fmt.Sprintf("✅<a href=\"%v\">%v</a> /%v_%v", GetBlockURLBySlug(b.Slug), b.Name, UnsubscribeCommand, embeddedSlug)
+		return fmt.Sprintf("✅<a href=\"%v\">%v</a> %v", GetBlockURLBySlug(b.Slug), b.Name, GetEmbeddedCommand(UnsubscribeCommand, embeddedSlug))
 	}
-	return fmt.Sprintf("<a href=\"%v\">%v</a> /%v_%v", GetBlockURLBySlug(b.Slug), b.Name, SubscribeCommand, embeddedSlug)
+	return fmt.Sprintf("<a href=\"%v\">%v</a> %v", GetBlockURLBySlug(b.Slug), b.Name, GetEmbeddedCommand(SubscribeCommand, embeddedSlug))
+}
+
+func GetEmbeddedCommand(command, slug string) string {
+	return fmt.Sprintf("<a href=\"t.me/%v?start=%v_%v\">%v</a>", util.GetBotUsername(), command, slug, command)
 }
 
 func init() {

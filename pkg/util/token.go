@@ -39,3 +39,11 @@ func GetBotToken() string {
 
 	return botToken
 }
+
+func GetBotUsername() string {
+	envType := GetEnvType()
+	if envType == EnvTypeDev || envType == EnvTypeTesting {
+		return "PikCheckerTestBot"
+	}
+	return "pik_checker_bot"
+}

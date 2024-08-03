@@ -162,6 +162,13 @@ func processUpdate(update *UpdateStruct) {
 		offset, length := entity.Offset, entity.Length
 		command := strings.TrimLeft(update.Message.Text[offset:offset+length], "/")
 
+		if command == "start" {
+			further := strings.TrimLeft(update.Message.Text[offset+length:], " ")
+			if len(further) > 0 {
+				command = further
+			}
+		}
+
 		args := update.Message.Text[offset+length:]
 		if strings.Contains(command, "_") {
 			command, args, _ = strings.Cut(command, "_")
