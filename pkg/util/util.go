@@ -97,3 +97,14 @@ func SortedKeys[K constraints.Ordered, V any](m map[K]V) []K {
 	})
 	return keys
 }
+
+func SortedKeysByFunc[K constraints.Ordered, V any](m map[K]V, comp func(K, K) bool) []K {
+	keys := make([]K, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return comp(keys[i], keys[j])
+	})
+	return keys
+}

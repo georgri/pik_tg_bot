@@ -28,7 +28,9 @@ func sendList(chatID int64) {
 	subscribedTo := GetChatSubscriptions(chatID)
 
 	var complexes []string
-	for _, comp := range util.SortedKeys(BlockSlugs) {
+	for _, comp := range util.SortedKeysByFunc(BlockSlugs, func(a, b string) bool {
+		return BlockSlugs[a].Name < BlockSlugs[b].Name
+	}) {
 		isSubscribed := subscribedTo[comp]
 		complexes = append(complexes, BlockSlugs[comp].StringWithSub(isSubscribed))
 	}
