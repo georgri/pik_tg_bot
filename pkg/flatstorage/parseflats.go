@@ -26,7 +26,7 @@ type Flat struct {
 	Area   float64 `json:"area"`
 	Floor  int64   `json:"floor"`
 	Metro  Metro   `json:"metro"`
-	Price  int64   `json:"price"`
+	Price  int64   `json:"price"` // in rub
 	Rooms  int8    `json:"rooms"`
 	Status string  `json:"status"`
 	// TODO: find Url plan with areas, maybe with address https://www.pik.ru/flat/819556
@@ -41,6 +41,8 @@ type Flat struct {
 
 	FinishType     int8   `json:"finishType"`
 	SettlementDate string `json:"settlementDate"`
+
+	AveragePrice int64 `json:"averagePrice"`
 }
 
 type MessageData struct {
@@ -148,6 +150,39 @@ func (md *MessageData) GetBlockSlug() string {
 	return md.Flats[0].BlockSlug
 }
 
+type AveragePriceKey struct {
+	BlockSlug string
+	Rooms     int8
+}
+
+type AveragePriceAggregator map[AveragePriceKey][]int
+
+func (md *MessageData) CalcAveragePrices() {
+	aggregate := make(AveragePriceAggregator)
+	for i, flat := range md.Flats {
+		key := AveragePriceKey{
+			BlockSlug: flat.BlockSlug,
+			Rooms:     flat.Rooms,
+		}
+		aggregate[key] = append(aggregate[key], i)
+	}
+
+	for key := range aggregate {
+		priceSum := int64(0)
+		squareMeters := float64(0)
+		for _, flatIndex := range aggregate[key] {
+			priceSum += md.Flats[flatIndex].Price
+			squareMeters += md.Flats[flatIndex].Area
+		}
+		avgPrice := priceSum / int64(squareMeters)
+
+		for _, flatIndex := range aggregate[key] {
+			md.Flats[flatIndex].AveragePrice = avgPrice
+		}
+	}
+	return
+}
+
 func (f *Flat) RecentlyUpdated(now time.Time) bool {
 	t, err := time.Parse(time.RFC3339, f.Updated)
 	if err != nil {
@@ -180,8 +215,24 @@ func (f *Flat) String() string {
 	finishTypeString := GetFinishTypeString(f.FinishType)
 
 	res := fmt.Sprintf("%v: <a href=\"%v\">%vr, %vm2</a>, %vR, f%v%v, %v, %v", corp, flatURL, rooms, area, price, floor, reserve, settlementQuarter, finishTypeString)
+	avgPrice := f.formatAvgPrice()
+	if avgPrice != "" {
+		res += ", " + avgPrice
+	}
 
 	return res
+}
+
+func (f *Flat) formatAvgPrice() string {
+	if f.AveragePrice == 0 {
+		return ""
+	}
+
+	percentage := ((float64(f.Price)/f.Area)/float64(f.AveragePrice) - 1) * 100
+	if percentage >= 0 {
+		return fmt.Sprintf("avg+%.1f%%", percentage)
+	}
+	return fmt.Sprintf("avg%.1f%%", percentage)
 }
 
 // ex 2025-06-15 => 25Q3

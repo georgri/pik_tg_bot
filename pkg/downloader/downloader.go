@@ -69,6 +69,8 @@ func GetFlats(chatID int64, blockID int64) (message string, filtered int, update
 		return "", 0, nil, fmt.Errorf("got 0 Flats from url")
 	}
 
+	msgData.CalcAveragePrices()
+
 	origMsgData := msgData.Copy()
 
 	// filter through local file (MVP)
