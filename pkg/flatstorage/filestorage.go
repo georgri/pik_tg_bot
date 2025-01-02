@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/georgri/pik_tg_bot/pkg/util"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -15,7 +16,8 @@ const (
 	storageDir    = "data"
 	storageFormat = "json"
 
-	DefaultPriceDropPercentThreshold = 15
+	DefaultPriceDropPercentThreshold        = 15
+	DefaultExtremePriceDropPercentThreshold = 20
 )
 
 func ReadFlatStorage(fileName string) (*MessageData, error) {
@@ -41,24 +43,21 @@ func ReadFlatStorage(fileName string) (*MessageData, error) {
 }
 
 // FilterWithFlatStorage filter through local file (MVP)
-func FilterWithFlatStorage(msg *MessageData) (*MessageData, *PriceDropMessageData, error) {
+func FilterWithFlatStorage(msg *MessageData) ([]string, error) {
 	if msg == nil || len(msg.Flats) == 0 {
-		return msg, nil, nil
+		return []string{msg.String()}, nil
 	}
 
 	storageFileName := GetStorageFileName(msg)
 	oldMessageData, err := ReadFlatStorage(storageFileName)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	var priceDropMsg *PriceDropMessageData
-	msg, priceDropMsg = FilterWithFlatStorageHelper(oldMessageData, msg)
-
-	return msg, priceDropMsg, nil
+	return FilterWithFlatStorageHelper(oldMessageData, msg), nil
 }
 
-func FilterWithFlatStorageHelper(oldMsg, newMsg *MessageData) (*MessageData, *PriceDropMessageData) {
+func FilterWithFlatStorageHelper(oldMsg, newMsg *MessageData) []string {
 	// gen old map
 	oldFlatsMap := make(map[int64]int)
 	for oldIndex := range oldMsg.Flats {
@@ -66,13 +65,20 @@ func FilterWithFlatStorageHelper(oldMsg, newMsg *MessageData) (*MessageData, *Pr
 	}
 
 	var priceDropList []Flat
+	var extremePriceDropList []Flat
 	for i := range newMsg.Flats {
 		oldIndex, ok := oldFlatsMap[newMsg.Flats[i].ID]
 		if !ok {
+			// check if price of new flat is below average
+			if newMsg.Flats[i].GetPriceBelowAveragePercentage() <= -DefaultExtremePriceDropPercentThreshold {
+				extremePriceDropList = append(extremePriceDropList, newMsg.Flats[i])
+			}
 			continue // skip new flats
 		}
 		newMsg.Flats[i].OldPrice = oldMsg.Flats[oldIndex].Price
-		if newMsg.Flats[i].GetPriceDropPercentage() <= -DefaultPriceDropPercentThreshold {
+		if newMsg.Flats[i].GetPriceDropPercentage() <= -DefaultExtremePriceDropPercentThreshold {
+			extremePriceDropList = append(extremePriceDropList, newMsg.Flats[i])
+		} else if newMsg.Flats[i].GetPriceDropPercentage() <= -DefaultPriceDropPercentThreshold {
 			priceDropList = append(priceDropList, newMsg.Flats[i])
 		}
 	}
@@ -82,6 +88,14 @@ func FilterWithFlatStorageHelper(oldMsg, newMsg *MessageData) (*MessageData, *Pr
 		priceDropMsg = &PriceDropMessageData{
 			Flats:                     priceDropList,
 			PriceDropPercentThreshold: DefaultPriceDropPercentThreshold,
+		}
+	}
+
+	var extremePriceDropMsg *PriceDropMessageData
+	if len(extremePriceDropList) > 0 {
+		extremePriceDropMsg = &PriceDropMessageData{
+			Flats:                     extremePriceDropList,
+			PriceDropPercentThreshold: DefaultExtremePriceDropPercentThreshold,
 		}
 	}
 
@@ -95,7 +109,23 @@ func FilterWithFlatStorageHelper(oldMsg, newMsg *MessageData) (*MessageData, *Pr
 		return newMsg.Flats[i].ID
 	})
 
-	return newMsg, priceDropMsg
+	var res []string
+	msgStr := newMsg.String()
+	if len(strings.TrimSpace(msgStr)) > 0 {
+		res = append(res, msgStr)
+	}
+
+	priceDropStr := priceDropMsg.String()
+	if len(strings.TrimSpace(priceDropStr)) > 0 {
+		res = append(res, priceDropStr)
+	}
+
+	extremePriceDropStr := extremePriceDropMsg.StringWithPrompt(fmt.Sprintf("flats extreme price drop in"))
+	if len(strings.TrimSpace(extremePriceDropStr)) > 0 {
+		res = append(res, "!!! "+extremePriceDropStr) // add magic symbol to send to all known chats
+	}
+
+	return res
 }
 
 type oldFlatInfo struct {

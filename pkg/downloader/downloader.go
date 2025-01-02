@@ -5,7 +5,6 @@ import (
 	"github.com/georgri/pik_tg_bot/pkg/flatstorage"
 	"io"
 	"net/http"
-	"strings"
 )
 
 const (
@@ -47,12 +46,12 @@ func GetFlatsSinglePage(url string) (*flatstorage.MessageData, error) {
 	return msgData, nil
 }
 
-func GetFlats(blockID int64) (message []string, filtered int, updateCallback func() error, err error) {
+func GetFlats(blockID int64) (messages []string, updateCallback func() error, err error) {
 	url := fmt.Sprintf("%v/%v?%v", PikUrl, blockID, UrlParams)
 
 	msgData, err := GetFlatsSinglePage(url)
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, nil, err
 	}
 
 	if msgData.LastPage > 1 {
@@ -60,14 +59,14 @@ func GetFlats(blockID int64) (message []string, filtered int, updateCallback fun
 			addUrl := fmt.Sprintf("%v&%v=%v", url, flatPageFlag, i)
 			addMsgData, err := GetFlatsSinglePage(addUrl)
 			if err != nil {
-				return nil, 0, nil, err
+				return nil, nil, err
 			}
 			msgData.Flats = append(msgData.Flats, addMsgData.Flats...)
 		}
 	}
 
 	if len(msgData.Flats) == 0 {
-		return nil, 0, nil, fmt.Errorf("got 0 Flats from url")
+		return nil, nil, fmt.Errorf("got 0 Flats from url")
 	}
 
 	msgData.CalcAveragePrices()
@@ -75,31 +74,16 @@ func GetFlats(blockID int64) (message []string, filtered int, updateCallback fun
 	origMsgData := msgData.Copy()
 
 	// filter through local file (MVP)
-	sizeBefore := len(msgData.Flats)
-	var priceDropMsgData *flatstorage.PriceDropMessageData
-	msgData, priceDropMsgData, err = flatstorage.FilterWithFlatStorage(msgData)
+	var res []string
+	res, err = flatstorage.FilterWithFlatStorage(msgData)
 	if err != nil {
-		return nil, 0, nil, fmt.Errorf("err while reading/updating local Flats file: %v", err)
+		return nil, nil, fmt.Errorf("err while reading/updating local Flats file: %v", err)
 	}
-
-	// convert Flats to human-readable message
-	msg := msgData.String()
-
-	priceDropMsg := priceDropMsgData.String()
 
 	updateCallback = func() error {
 		_, err = flatstorage.UpdateFlatStorage(origMsgData)
 		return err
 	}
 
-	var res []string
-	if len(strings.TrimSpace(msg)) > 0 {
-		res = append(res, msg)
-	}
-
-	if len(strings.TrimSpace(priceDropMsg)) > 0 {
-		res = append(res, priceDropMsg)
-	}
-
-	return res, sizeBefore - len(msgData.Flats), updateCallback, nil
+	return res, updateCallback, nil
 }

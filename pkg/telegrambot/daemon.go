@@ -113,7 +113,7 @@ func DownloadAndUpdateFile(blockSlug string) ([]string, error) {
 
 	envtype := util.GetEnvType().String()
 
-	flatMsgs, filtered, updateCallback, err := downloader.GetFlats(blockID)
+	flatMsgs, updateCallback, err := downloader.GetFlats(blockID)
 	if err != nil {
 		return nil, fmt.Errorf("error getting response from pik.ru: %v", err)
 	}
@@ -124,7 +124,7 @@ func DownloadAndUpdateFile(blockSlug string) ([]string, error) {
 	}
 
 	if len(flatMsgs) == 0 {
-		return nil, fmt.Errorf("no new flats in %v (envtype %v), aborting; filtered %v", blockSlug, envtype, filtered)
+		return nil, fmt.Errorf("no new flats in %v (envtype %v), aborting", blockSlug, envtype)
 	}
 
 	log.Printf("Got flats in %v (envtype %v): %v", blockSlug, envtype, flatMsgs)

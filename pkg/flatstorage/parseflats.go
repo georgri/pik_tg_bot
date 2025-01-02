@@ -111,6 +111,14 @@ func (f *Flat) GetPriceDropPercentage() float64 {
 	return ((float64(f.Price) / float64(f.OldPrice)) - 1) * 100
 }
 
+func (f *Flat) GetPriceBelowAveragePercentage() float64 {
+	if f == nil || f.AveragePrice == 0 {
+		return 0
+	}
+
+	return ((float64(f.Price) / float64(f.AveragePrice)) - 1) * 100
+}
+
 // String print in human readable telegram friendly format
 // example input:
 // {831859 32.6 19 {Нагатинская #ACADAF} 12756380 1 free
@@ -300,6 +308,10 @@ func GetFinishTypeString(finishType int8) string {
 // {number of Flats} квартир подешевели более, чем на {price_drop_threshold}% в ЖК "Второй Нагатинский":
 // Корпус 1.3 #831859[url link to flat]: 32.6m, 1r, f19, 12_756_380rub, {(price_new/price_old - 1)*100)%
 func (md *PriceDropMessageData) String() string {
+	return md.StringWithPrompt("flats dropped prices in")
+}
+
+func (md *PriceDropMessageData) StringWithPrompt(prompt string) string {
 	if md == nil || len(md.Flats) == 0 {
 		return ""
 	}
@@ -309,7 +321,7 @@ func (md *PriceDropMessageData) String() string {
 		return md.Flats[i].GetPriceDropPercentage() < md.Flats[j].GetPriceDropPercentage()
 	})
 
-	res := md.MakeHeader()
+	res := md.MakeHeader(prompt)
 
 	flats := make([]string, 0, len(md.Flats))
 	for _, flat := range md.Flats {
@@ -323,7 +335,7 @@ func (md *PriceDropMessageData) String() string {
 
 // MakeHeader example:
 // {number of Flats} квартир подешевели более, чем на {price_drop_threshold}% в ЖК "Второй Нагатинский":
-func (md *PriceDropMessageData) MakeHeader() string {
+func (md *PriceDropMessageData) MakeHeader(prompt string) string {
 
 	if md == nil || len(md.Flats) == 0 {
 		return ""
@@ -333,8 +345,8 @@ func (md *PriceDropMessageData) MakeHeader() string {
 	numFlats := len(md.Flats)
 	blockName := flat.BlockName
 
-	res := fmt.Sprintf("%v flats dropped prices in %v:",
-		numFlats, blockName)
+	res := fmt.Sprintf("%v %v %v:",
+		numFlats, prompt, blockName)
 
 	return res
 }
