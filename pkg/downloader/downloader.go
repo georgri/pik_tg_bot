@@ -66,7 +66,7 @@ func GetFlats(blockID int64) (messages []string, updateCallback func() error, er
 	}
 
 	if len(msgData.Flats) == 0 {
-		return nil, nil, fmt.Errorf("got 0 Flats from url")
+		return nil, nil, fmt.Errorf("got 0 Flats from url %v", url)
 	}
 
 	msgData.CalcAveragePrices()
