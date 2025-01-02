@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	FileMaxUpdatePeriod = 20 * time.Minute
+	FileMaxUpdatePeriod = 30 * time.Minute
 
 	storageDir    = "data"
 	storageFormat = "json"
@@ -41,12 +41,12 @@ func ReadFlatStorage(fileName string) (*MessageData, error) {
 }
 
 // FilterWithFlatStorage filter through local file (MVP)
-func FilterWithFlatStorage(msg *MessageData, chatID int64) (*MessageData, *PriceDropMessageData, error) {
+func FilterWithFlatStorage(msg *MessageData) (*MessageData, *PriceDropMessageData, error) {
 	if msg == nil || len(msg.Flats) == 0 {
 		return msg, nil, nil
 	}
 
-	storageFileName := GetStorageFileName(msg, chatID)
+	storageFileName := GetStorageFileName(msg)
 	oldMessageData, err := ReadFlatStorage(storageFileName)
 	if err != nil {
 		return nil, nil, err
@@ -155,12 +155,12 @@ func MergeNewFlatsIntoOld(oldMsg, newMsg *MessageData) *MessageData {
 }
 
 // UpdateFlatStorage update local file (MVP)
-func UpdateFlatStorage(msg *MessageData, chatID int64) (numUpdated int, err error) {
+func UpdateFlatStorage(msg *MessageData) (numUpdated int, err error) {
 	if msg == nil || len(msg.Flats) == 0 {
 		return 0, fmt.Errorf("did not update anything")
 	}
 
-	storageFileName := GetStorageFileName(msg, chatID)
+	storageFileName := GetStorageFileName(msg)
 	oldMessageData, err := ReadFlatStorage(storageFileName)
 	if err != nil {
 		return 0, err
@@ -187,22 +187,22 @@ func GetStorageFileNameByEnv(msg *MessageData) string {
 	return GetStorageFileNameByBlockSlugAndEnv(blockSlug)
 }
 
-func GetStorageFileName(msg *MessageData, chatID int64) string {
+func GetStorageFileName(msg *MessageData) string {
 	blockSlug := msg.GetBlockSlug()
-	return GetStorageFileNameByBlockSlugAndChatID(blockSlug, chatID)
+	return GetStorageFileNameByBlockSlug(blockSlug)
 }
 
 func GetStorageFileNameByBlockSlugAndEnv(blockSlug string) string {
 	return fmt.Sprintf("%v/%v_%v.%v", storageDir, blockSlug, util.GetEnvType().String(), storageFormat)
 }
 
-func GetStorageFileNameByBlockSlugAndChatID(blockSlug string, chatID int64) string {
+func GetStorageFileNameByBlockSlug(blockSlug string) string {
 	// First, try find file without any chatID but with envtype
 	targetFileName := GetStorageFileNameByBlockSlugAndEnv(blockSlug)
 	if FileExists(targetFileName) {
 		return targetFileName
 	}
-	fileNameWithChatID := fmt.Sprintf("%v/%v_%v.%v", storageDir, blockSlug, chatID, storageFormat)
+	fileNameWithChatID := fmt.Sprintf("%v/%v_%v.%v", storageDir, blockSlug, 0, storageFormat)
 	if FileExists(fileNameWithChatID) {
 		return fileNameWithChatID
 	}

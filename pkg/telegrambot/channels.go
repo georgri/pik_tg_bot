@@ -3,6 +3,7 @@ package telegrambot
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/georgri/pik_tg_bot/pkg/flatstorage"
 	"github.com/georgri/pik_tg_bot/pkg/util"
 	"log"
 	"os"
@@ -23,6 +24,12 @@ type ChannelInfo struct {
 	BlockSlug string `json:"block_slug"` // real estate project, e.g 2ngt, utnv
 }
 
+func NewChannelsFileData() *ChannelsFileData {
+	return &ChannelsFileData{
+		ChannelsMap: make(ChannelsFileMap),
+	}
+}
+
 func init() {
 	// read file, append to hardcode
 	channels, err := ReadChannelStorage(ChannelsFile)
@@ -41,6 +48,10 @@ func init() {
 func ReadChannelStorage(fileName string) (*ChannelsFileData, error) {
 	chnData := &ChannelsFileData{}
 
+	if !flatstorage.FileExists(fileName) {
+		return NewChannelsFileData(), nil
+	}
+
 	content, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil, err
@@ -56,11 +67,8 @@ func ReadChannelStorage(fileName string) (*ChannelsFileData, error) {
 }
 
 func MergeChannelsWithHardcode(channels *ChannelsFileData) error {
-	if channels == nil {
-		return fmt.Errorf("nothing to merge into hardcode: channels == nil")
-	}
-	if len(channels.ChannelsMap) == 0 {
-		return fmt.Errorf("nothing to merge into hardcode: channel map is empty")
+	if channels == nil || len(channels.ChannelsMap) == 0 {
+		return nil
 	}
 	for envTypeStr, channelList := range channels.ChannelsMap {
 		envType, ok := util.EnvTypeFromString[envTypeStr]

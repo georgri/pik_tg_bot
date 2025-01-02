@@ -213,7 +213,13 @@ func (f *Flat) String() string {
 		return ""
 	}
 
-	corp := strings.Split(f.BulkName, " ")[1]
+	var corp string
+	bulkSplit := strings.Split(f.BulkName, " ")
+	if len(bulkSplit) > 1 {
+		corp = bulkSplit[1]
+	} else {
+		corp = f.BulkName
+	}
 	id := f.ID
 	flatURL := fmt.Sprintf("https://www.pik.ru/flat/%v", id)
 	area := fmt.Sprintf("%.1f", f.Area)

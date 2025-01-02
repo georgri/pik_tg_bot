@@ -79,14 +79,9 @@ func sendDump(chatID int64, slug string) {
 	var msg string
 
 	// send all known flats for complex with slug "slug"
-	fileName, err := GetStorageFileNameByBlockSlug(slug)
-	if !flatstorage.FileExists(fileName) || flatstorage.FileNotUpdated(fileName) {
-		// no existing flats for zhk => force update flats into file
-		_, err = DownloadAndUpdateFile(slug, 0)
-		if err != nil {
-			log.Printf("failed to download/update flats for slug %v: %v", slug, err)
-			return
-		}
+	fileName := flatstorage.GetStorageFileNameByBlockSlug(slug)
+	if !flatstorage.FileExists(fileName) {
+		log.Printf("failed to dump flats for slug %v: %v", slug, err)
 	}
 	allFlatsMessageData, err := flatstorage.ReadFlatStorage(fileName)
 	if err != nil {
@@ -109,22 +104,6 @@ func sendDump(chatID int64, slug string) {
 	if err != nil {
 		log.Printf("failed to send list of all blocks to chatID %v: %v", chatID, err)
 	}
-}
-
-func GetStorageFileNameByBlockSlug(blockSlug string) (string, error) {
-	// guess chatID
-	// TODO: go with empty chatID
-	var chatID int64
-	for _, channel := range ChannelIDs[util.GetEnvType()] {
-		if channel.BlockSlug == blockSlug {
-			chatID = channel.ChatID
-			break
-		}
-	}
-	if chatID == 0 {
-		return "", fmt.Errorf("yet unknown block slug: %v", blockSlug)
-	}
-	return flatstorage.GetStorageFileNameByBlockSlugAndChatID(blockSlug, chatID), nil
 }
 
 func AddNewSubscriber(chatID int64, slug string) error {

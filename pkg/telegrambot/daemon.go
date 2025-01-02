@@ -11,7 +11,10 @@ import (
 )
 
 const (
-	invokeEvery = 5 * time.Minute
+	invokeEvery = 10 * time.Minute
+
+	pauseAfterEach = 10
+	pauseFor       = 10 * time.Second
 
 	logfile = "logs/bot.log"
 )
@@ -55,36 +58,62 @@ func RunOnce() {
 	for _, channelInfo := range ChannelIDs[envType] {
 		slugs[channelInfo.BlockSlug] = append(slugs[channelInfo.BlockSlug], channelInfo.ChatID)
 	}
+	var count int
 	for slug, chatIDs := range slugs {
 		ProcessWithSlugAndChatIDs(slug, chatIDs)
+
+		count += 1
+		if count%pauseAfterEach == 0 {
+			time.Sleep(pauseFor)
+		}
+	}
+
+	// download info about all the unsubscribed blocks
+	for slug := range BlockSlugs {
+		if _, ok := slugs[slug]; ok {
+			continue // already processed
+		}
+		ProcessWithSlugAndChatIDs(slug, nil)
+
+		count += 1
+		if count%pauseAfterEach == 0 {
+			time.Sleep(pauseFor)
+		}
 	}
 }
 
 func ProcessWithSlugAndChatIDs(blockSlug string, chatIDs []int64) {
-	msgs, err := DownloadAndUpdateFile(blockSlug, chatIDs[0])
+	msgs, err := DownloadAndUpdateFile(blockSlug)
 	if err != nil {
 		log.Printf("error while updating flats: %v", err)
 		return
 	}
 
-	for _, chatID := range chatIDs {
-		for _, msg := range msgs {
-			err = SendMessage(chatID, msg)
+	for i := range msgs {
+		if len(msgs[i]) > 0 && msgs[i][0] == '!' { // let ! be the magic symbol to send to all known chats
+			err = SendToAllKnownChats(msgs[i])
 			if err != nil {
-				log.Printf("error while sending message in %v (chatID %v): %v", blockSlug, chatID, err)
+				log.Printf("error while sending message to all known chats about %v: %v", blockSlug, err)
 				return
+			}
+		} else {
+			for _, chatID := range chatIDs {
+				err = SendMessage(chatID, msgs[i])
+				if err != nil {
+					log.Printf("error while sending message in %v (chatID %v): %v", blockSlug, chatID, err)
+					return
+				}
 			}
 		}
 	}
 }
 
-func DownloadAndUpdateFile(blockSlug string, chatID int64) ([]string, error) {
+func DownloadAndUpdateFile(blockSlug string) ([]string, error) {
 	blockID := GetBlockIDBySlug(blockSlug)
 
 	envtype := util.GetEnvType().String()
 
-	// TODO: get rid of chatIDs[0] after safe migration
-	flatMsgs, filtered, updateCallback, err := downloader.GetFlats(chatID, blockID)
+	flatMsgs, filtered, updateCallback, err := downloader.GetFlats(blockID)
 	if err != nil {
 		return nil, fmt.Errorf("error getting response from pik.ru: %v", err)
 	}
