@@ -61,8 +61,8 @@ func FilterWithFlatStorage(msg *MessageData, chatID int64) (*MessageData, *Price
 func FilterWithFlatStorageHelper(oldMsg, newMsg *MessageData) (*MessageData, *PriceDropMessageData) {
 	// gen old map
 	oldFlatsMap := make(map[int64]int)
-	for oldIndex, flat := range oldMsg.Flats {
-		oldFlatsMap[flat.ID] = oldIndex
+	for oldIndex := range oldMsg.Flats {
+		oldFlatsMap[oldMsg.Flats[oldIndex].ID] = oldIndex
 	}
 
 	var priceDropList []Flat
@@ -71,8 +71,8 @@ func FilterWithFlatStorageHelper(oldMsg, newMsg *MessageData) (*MessageData, *Pr
 		if !ok {
 			continue // skip new flats
 		}
-		if -(float64(newMsg.Flats[i].Price)/float64(oldMsg.Flats[oldIndex].Price)-1)*100 >= DefaultPriceDropPercentThreshold {
-			newMsg.Flats[i].OldPrice = oldMsg.Flats[oldIndex].Price
+		newMsg.Flats[i].OldPrice = oldMsg.Flats[oldIndex].Price
+		if newMsg.Flats[i].GetPriceDropPercentage() <= -DefaultPriceDropPercentThreshold {
 			priceDropList = append(priceDropList, newMsg.Flats[i])
 		}
 	}

@@ -294,6 +294,9 @@ func GetFinishTypeString(finishType int8) string {
 // {number of Flats} квартир подешевели более, чем на {price_drop_threshold}% в ЖК "Второй Нагатинский":
 // Корпус 1.3 #831859[url link to flat]: 32.6m, 1r, f19, 12_756_380rub, {(price_new/price_old - 1)*100)%
 func (md *PriceDropMessageData) String() string {
+	if md == nil || len(md.Flats) == 0 {
+		return ""
+	}
 
 	// sorting by percentage drop increasing (-20%, -19%, -15%, etc.)
 	sort.Slice(md.Flats, func(i, j int) bool {
