@@ -43,6 +43,7 @@ type Flat struct {
 	SettlementDate string `json:"settlementDate"`
 
 	AveragePrice int64 `json:"averagePrice"`
+	OldPrice     int64 `json:"oldPrice"`
 }
 
 type MessageData struct {

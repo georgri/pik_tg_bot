@@ -75,6 +75,11 @@ func FilterWithFlatStorageHelper(oldMsg, newMsg *MessageData) *MessageData {
 	return newMsg
 }
 
+type oldFlatInfo struct {
+	Created  string
+	OldPrice int64
+}
+
 func MergeNewFlatsIntoOld(oldMsg, newMsg *MessageData) *MessageData {
 	newMsg.Flats = util.FilterUnique(newMsg.Flats, func(i int) int64 {
 		return newMsg.Flats[i].ID
@@ -90,7 +95,7 @@ func MergeNewFlatsIntoOld(oldMsg, newMsg *MessageData) *MessageData {
 	past := time.Now().Add(-10 * 365 * 24 * time.Hour).Format(time.RFC3339)
 
 	// old map with created dates
-	oldFlatsMap := make(map[int64]string)
+	oldFlatsMap := make(map[int64]oldFlatInfo)
 	for i := range oldMsg.Flats {
 		if len(oldMsg.Flats[i].Created) == 0 {
 			oldMsg.Flats[i].Created = past
@@ -98,7 +103,10 @@ func MergeNewFlatsIntoOld(oldMsg, newMsg *MessageData) *MessageData {
 		if len(oldMsg.Flats[i].Updated) == 0 {
 			oldMsg.Flats[i].Updated = oldMsg.Flats[i].Created
 		}
-		oldFlatsMap[oldMsg.Flats[i].ID] = oldMsg.Flats[i].Created
+		oldFlatsMap[oldMsg.Flats[i].ID] = oldFlatInfo{
+			Created:  oldMsg.Flats[i].Created,
+			OldPrice: oldMsg.Flats[i].Price,
+		}
 	}
 
 	// filter out existing old Flats by ID
@@ -110,8 +118,9 @@ func MergeNewFlatsIntoOld(oldMsg, newMsg *MessageData) *MessageData {
 	// update both "Created" and "Updated" for new flats
 	for i := range newMsg.Flats {
 		newMsg.Flats[i].Created = now
-		if created, ok := oldFlatsMap[newMsg.Flats[i].ID]; ok {
-			newMsg.Flats[i].Created = created
+		if oldInfo, ok := oldFlatsMap[newMsg.Flats[i].ID]; ok {
+			newMsg.Flats[i].Created = oldInfo.Created
+			newMsg.Flats[i].OldPrice = oldInfo.OldPrice
 		}
 		newMsg.Flats[i].Updated = now
 	}
