@@ -120,7 +120,7 @@ func FilterWithFlatStorageHelper(oldMsg, newMsg *MessageData) []string {
 		res = append(res, priceDropStr)
 	}
 
-	extremePriceDropStr := extremePriceDropMsg.StringWithPrompt(fmt.Sprintf("flats extreme price drop in"))
+	extremePriceDropStr := extremePriceDropMsg.StringWithPrompt(fmt.Sprintf("extreme price drops in"))
 	if len(strings.TrimSpace(extremePriceDropStr)) > 0 {
 		res = append(res, "!!! "+extremePriceDropStr) // add magic symbol to send to all known chats
 	}
