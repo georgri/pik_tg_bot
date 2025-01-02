@@ -10,10 +10,12 @@ import (
 )
 
 const (
-	FileMaxUpdatePeriod = 10 * time.Minute
+	FileMaxUpdatePeriod = 20 * time.Minute
 
 	storageDir    = "data"
 	storageFormat = "json"
+
+	DefaultPriceDropPercentThreshold = 15
 )
 
 func ReadFlatStorage(fileName string) (*MessageData, error) {
@@ -39,27 +41,48 @@ func ReadFlatStorage(fileName string) (*MessageData, error) {
 }
 
 // FilterWithFlatStorage filter through local file (MVP)
-func FilterWithFlatStorage(msg *MessageData, chatID int64) (*MessageData, error) {
+func FilterWithFlatStorage(msg *MessageData, chatID int64) (*MessageData, *PriceDropMessageData, error) {
 	if msg == nil || len(msg.Flats) == 0 {
-		return msg, nil
+		return msg, nil, nil
 	}
 
 	storageFileName := GetStorageFileName(msg, chatID)
 	oldMessageData, err := ReadFlatStorage(storageFileName)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	msg = FilterWithFlatStorageHelper(oldMessageData, msg)
+	var priceDropMsg *PriceDropMessageData
+	msg, priceDropMsg = FilterWithFlatStorageHelper(oldMessageData, msg)
 
-	return msg, nil
+	return msg, priceDropMsg, nil
 }
 
-func FilterWithFlatStorageHelper(oldMsg, newMsg *MessageData) *MessageData {
+func FilterWithFlatStorageHelper(oldMsg, newMsg *MessageData) (*MessageData, *PriceDropMessageData) {
 	// gen old map
-	oldFlatsMap := make(map[int64]Flat)
-	for _, flat := range oldMsg.Flats {
-		oldFlatsMap[flat.ID] = flat
+	oldFlatsMap := make(map[int64]int)
+	for oldIndex, flat := range oldMsg.Flats {
+		oldFlatsMap[flat.ID] = oldIndex
+	}
+
+	var priceDropList []Flat
+	for i := range newMsg.Flats {
+		oldIndex, ok := oldFlatsMap[newMsg.Flats[i].ID]
+		if !ok {
+			continue // skip new flats
+		}
+		if -(float64(newMsg.Flats[i].Price)/float64(oldMsg.Flats[oldIndex].Price)-1)*100 >= DefaultPriceDropPercentThreshold {
+			newMsg.Flats[i].OldPrice = oldMsg.Flats[oldIndex].Price
+			priceDropList = append(priceDropList, newMsg.Flats[i])
+		}
+	}
+
+	var priceDropMsg *PriceDropMessageData
+	if len(priceDropList) > 0 {
+		priceDropMsg = &PriceDropMessageData{
+			Flats:                     priceDropList,
+			PriceDropPercentThreshold: DefaultPriceDropPercentThreshold,
+		}
 	}
 
 	// filter out existing Flats by ID
@@ -72,7 +95,7 @@ func FilterWithFlatStorageHelper(oldMsg, newMsg *MessageData) *MessageData {
 		return newMsg.Flats[i].ID
 	})
 
-	return newMsg
+	return newMsg, priceDropMsg
 }
 
 type oldFlatInfo struct {

@@ -81,29 +81,28 @@ func sendDump(chatID int64, slug string) {
 	// send all known flats for complex with slug "slug"
 	fileName, err := GetStorageFileNameByBlockSlug(slug)
 	if !flatstorage.FileExists(fileName) || flatstorage.FileNotUpdated(fileName) {
-		// force update flats into file
-		msg, err = DownloadAndUpdateFile(slug, 0)
+		// no existing flats for zhk => force update flats into file
+		_, err = DownloadAndUpdateFile(slug, 0)
 		if err != nil {
 			log.Printf("failed to download/update flats for slug %v: %v", slug, err)
 			return
 		}
-	} else {
-		allFlatsMessageData, err := flatstorage.ReadFlatStorage(fileName)
-		if err != nil {
-			log.Printf("failed to read file with flats %v: %v", fileName, err)
-			return
-		}
+	}
+	allFlatsMessageData, err := flatstorage.ReadFlatStorage(fileName)
+	if err != nil {
+		log.Printf("failed to read file with flats %v: %v", fileName, err)
+		return
+	}
 
-		// output recently updated only
-		now := time.Now()
-		allFlatsMessageData.Flats = util.FilterSliceInPlace(allFlatsMessageData.Flats, func(i int) bool {
-			return allFlatsMessageData.Flats[i].RecentlyUpdated(now)
-		})
+	// output recently updated only
+	now := time.Now()
+	allFlatsMessageData.Flats = util.FilterSliceInPlace(allFlatsMessageData.Flats, func(i int) bool {
+		return allFlatsMessageData.Flats[i].RecentlyUpdated(now)
+	})
 
-		msg = allFlatsMessageData.String()
-		if len(allFlatsMessageData.Flats) == 0 {
-			msg = fmt.Sprintf("No known flats for complex %v", slug)
-		}
+	msg = allFlatsMessageData.String()
+	if len(allFlatsMessageData.Flats) == 0 {
+		msg = fmt.Sprintf("No known flats for complex %v", slug)
 	}
 
 	err = SendMessageWithPin(chatID, msg, true)

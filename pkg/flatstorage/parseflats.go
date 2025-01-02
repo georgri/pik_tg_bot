@@ -52,6 +52,12 @@ type MessageData struct {
 	LastPage int
 }
 
+type PriceDropMessageData struct {
+	Flats []Flat `json:"flats"`
+
+	PriceDropPercentThreshold int8
+}
+
 type Metro struct {
 	Name  string `json:"name"`
 	Color string `json:"color"`
@@ -95,6 +101,14 @@ func (md *MessageData) Copy() *MessageData {
 		newMsg.Flats = append(newMsg.Flats, flat)
 	}
 	return newMsg
+}
+
+func (f *Flat) GetPriceDropPercentage() float64 {
+	if f == nil || f.OldPrice == 0 {
+		return 0
+	}
+
+	return ((float64(f.Price) / float64(f.OldPrice)) - 1) * 100
 }
 
 // String print in human readable telegram friendly format
@@ -224,6 +238,17 @@ func (f *Flat) String() string {
 	return res
 }
 
+func (f *Flat) PercentageDropString() string {
+	if f == nil {
+		return ""
+	}
+
+	res := f.String()
+	res += fmt.Sprintf(", price%.1f%%", f.GetPriceDropPercentage())
+
+	return res
+}
+
 func (f *Flat) formatAvgPrice() string {
 	if f.AveragePrice == 0 {
 		return ""
@@ -258,4 +283,49 @@ func GetFinishTypeString(finishType int8) string {
 		return "whitebox"
 	}
 	return "без отделки"
+}
+
+// String print in human readable telegram friendly format
+// example input:
+// {831859 32.6 19 {Нагатинская #ACADAF} 12756380 1 free
+// https://0.db-estate.cdn.pik-service.ru/attachment/0/167b4389-02d9-eb11-84e9-02bf0a4d8e27/6_sem2_1es3_5.7-1_s_z_07ef74f33ec511c288fe633c87ef297c.svg
+// Корпус 1.3 33 Второй Нагатинский}
+// example output:
+// {number of Flats} квартир подешевели более, чем на {price_drop_threshold}% в ЖК "Второй Нагатинский":
+// Корпус 1.3 #831859[url link to flat]: 32.6m, 1r, f19, 12_756_380rub, {(price_new/price_old - 1)*100)%
+func (md *PriceDropMessageData) String() string {
+
+	// sorting by percentage drop increasing (-20%, -19%, -15%, etc.)
+	sort.Slice(md.Flats, func(i, j int) bool {
+		return md.Flats[i].GetPriceDropPercentage() < md.Flats[j].GetPriceDropPercentage()
+	})
+
+	res := md.MakeHeader()
+
+	flats := make([]string, 0, len(md.Flats))
+	for _, flat := range md.Flats {
+		flats = append(flats, flat.PercentageDropString())
+	}
+
+	res += "\n" + strings.Join(flats, "\n") // try <br>
+
+	return res
+}
+
+// MakeHeader example:
+// {number of Flats} квартир подешевели более, чем на {price_drop_threshold}% в ЖК "Второй Нагатинский":
+func (md *PriceDropMessageData) MakeHeader() string {
+
+	if md == nil || len(md.Flats) == 0 {
+		return ""
+	}
+
+	flat := md.Flats[0]
+	numFlats := len(md.Flats)
+	blockName := flat.BlockName
+
+	res := fmt.Sprintf("%v flats dropped prices in %v:",
+		numFlats, blockName)
+
+	return res
 }
