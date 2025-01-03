@@ -17,6 +17,8 @@ const (
 	BlocksUrl = "https://flat.pik-service.ru/api/v1/filter/block?type=1,2&location=2,3&flatLimit=50&blockLimit=1000&geoBox=55.33638001424489,56.14056105282492-36.96336293218961,38.11418080328337"
 )
 
+var ErrorZeroFlats = fmt.Errorf("got zero flats")
+
 func GetUrl(url string) ([]byte, error) {
 	resp, err := http.Get(url)
 	if err != nil {
@@ -66,7 +68,7 @@ func GetFlats(blockID int64) (messages []string, updateCallback func() error, er
 	}
 
 	if len(msgData.Flats) == 0 {
-		return nil, nil, fmt.Errorf("got 0 Flats from url %v", url)
+		return nil, nil, ErrorZeroFlats
 	}
 
 	msgData.CalcAveragePrices()

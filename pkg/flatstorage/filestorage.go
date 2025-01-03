@@ -7,6 +7,7 @@ import (
 	"github.com/georgri/pik_tg_bot/pkg/util"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -20,8 +21,13 @@ const (
 	DefaultExtremePriceDropPercentThreshold = 20
 )
 
+var FileMutex sync.RWMutex
+
 func ReadFlatStorage(fileName string) (*MessageData, error) {
 	msgData := &MessageData{}
+
+	FileMutex.RLock()
+	defer FileMutex.RUnlock()
 
 	if !FileExists(fileName) {
 		return msgData, nil
@@ -190,7 +196,7 @@ func UpdateFlatStorage(msg *MessageData) (numUpdated int, err error) {
 		return 0, fmt.Errorf("did not update anything")
 	}
 
-	storageFileName := GetStorageFileName(msg)
+	storageFileName := GetStorageFileNameByEnv(msg)
 	oldMessageData, err := ReadFlatStorage(storageFileName)
 	if err != nil {
 		return 0, err
@@ -205,6 +211,10 @@ func UpdateFlatStorage(msg *MessageData) (numUpdated int, err error) {
 	if err != nil {
 		return 0, err
 	}
+
+	FileMutex.Lock()
+	defer FileMutex.Unlock()
+
 	err = os.WriteFile(newStorageFileName, newContent, 0644)
 	if err != nil {
 		return 0, err
@@ -212,6 +222,7 @@ func UpdateFlatStorage(msg *MessageData) (numUpdated int, err error) {
 
 	return numUpdated, nil
 }
+
 func GetStorageFileNameByEnv(msg *MessageData) string {
 	blockSlug := msg.GetBlockSlug()
 	return GetStorageFileNameByBlockSlugAndEnv(blockSlug)
@@ -240,6 +251,9 @@ func GetStorageFileNameByBlockSlug(blockSlug string) string {
 }
 
 func FileExists(filename string) bool {
+	FileMutex.RLock()
+	defer FileMutex.RUnlock()
+
 	_, err := os.Stat(filename)
 	return !errors.Is(err, os.ErrNotExist)
 }

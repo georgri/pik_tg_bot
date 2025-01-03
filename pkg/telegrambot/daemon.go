@@ -11,12 +11,13 @@ import (
 )
 
 const (
-	invokeEvery = 10 * time.Minute
-
-	pauseAfterEach = 10
-	pauseFor       = 10 * time.Second
+	invokeEvery = 1 * time.Minute
 
 	logfile = "logs/bot.log"
+)
+
+var (
+	errorNoNewFlats = fmt.Errorf("no new flats")
 )
 
 func RunForever() {
@@ -55,17 +56,14 @@ func RunOnce() {
 
 	slugs := make(map[string][]int64, 10)
 
+	var count int
+
 	for _, channelInfo := range ChannelIDs[envType] {
 		slugs[channelInfo.BlockSlug] = append(slugs[channelInfo.BlockSlug], channelInfo.ChatID)
 	}
-	var count int
 	for slug, chatIDs := range slugs {
-		ProcessWithSlugAndChatIDs(slug, chatIDs)
-
 		count += 1
-		if count%pauseAfterEach == 0 {
-			time.Sleep(pauseFor)
-		}
+		go ProcessWithSlugAndChatIDs(slug, chatIDs)
 	}
 
 	// download info about all the unsubscribed blocks
@@ -73,18 +71,17 @@ func RunOnce() {
 		if _, ok := slugs[slug]; ok {
 			continue // already processed
 		}
-		ProcessWithSlugAndChatIDs(slug, nil)
-
 		count += 1
-		if count%pauseAfterEach == 0 {
-			time.Sleep(pauseFor)
-		}
+		go ProcessWithSlugAndChatIDs(slug, nil)
 	}
 }
 
 func ProcessWithSlugAndChatIDs(blockSlug string, chatIDs []int64) {
 	msgs, err := DownloadAndUpdateFile(blockSlug)
 	if err != nil {
+		if err == errorNoNewFlats {
+			return
+		}
 		log.Printf("error while updating flats: %v", err)
 		return
 	}
@@ -115,6 +112,9 @@ func DownloadAndUpdateFile(blockSlug string) ([]string, error) {
 
 	flatMsgs, updateCallback, err := downloader.GetFlats(blockID)
 	if err != nil {
+		if err == downloader.ErrorZeroFlats {
+			return nil, errorNoNewFlats
+		}
 		return nil, fmt.Errorf("error getting response from pik.ru: %v", err)
 	}
 
@@ -124,7 +124,7 @@ func DownloadAndUpdateFile(blockSlug string) ([]string, error) {
 	}
 
 	if len(flatMsgs) == 0 {
-		return nil, fmt.Errorf("no new flats in %v (envtype %v), aborting", blockSlug, envtype)
+		return nil, errorNoNewFlats
 	}
 
 	log.Printf("Got flats in %v (envtype %v): %v", blockSlug, envtype, flatMsgs)

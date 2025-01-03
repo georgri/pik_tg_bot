@@ -3,6 +3,7 @@ package backup_data
 import (
 	"bytes"
 	"fmt"
+	"github.com/georgri/pik_tg_bot/pkg/flatstorage"
 	"io"
 	"log"
 	"os"
@@ -23,6 +24,10 @@ const (
 var BackupFileRegexp = regexp.MustCompile(`^data-.*-.*\.tar\.gz$`)
 
 func ArchiveDataFolder() error {
+
+	flatstorage.FileMutex.RLock()
+	defer flatstorage.FileMutex.RUnlock()
+
 	// tar + gzip
 	var buf bytes.Buffer
 	err := compress(DataFolder, &buf)

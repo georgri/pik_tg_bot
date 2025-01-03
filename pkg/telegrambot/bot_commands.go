@@ -100,10 +100,7 @@ func sendDump(chatID int64, slug string) {
 		msg = fmt.Sprintf("No known flats for complex %v", slug)
 	}
 
-	err = SendMessageWithPin(chatID, msg, true)
-	if err != nil {
-		log.Printf("failed to send list of all blocks to chatID %v: %v", chatID, err)
-	}
+	SendMessageWithPinAsync(chatID, msg, true)
 }
 
 func AddNewSubscriber(chatID int64, slug string) error {

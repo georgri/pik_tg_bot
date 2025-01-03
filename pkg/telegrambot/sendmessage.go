@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/georgri/pik_tg_bot/pkg/util"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -19,12 +20,43 @@ const (
 // https://api.telegram.org/bot6819149165:AAEQWnUotV_YsGS7EPaNbUKZpcvKhsmOgNg/sendMessage?chat_id=-1002057808675&text=hello_friend
 // i.e. https://api.telegram.org/bot{token}/sendMessage?chat_id={chat_id}&text={text}
 
+type telegramMessage struct {
+	chatID  int64
+	text    string
+	mustPin bool
+}
+
+var messageChannel chan telegramMessage
+
+func init() {
+	messageChannel = make(chan telegramMessage, 1024)
+	go func() {
+		// TODO: graceful degradation?
+		for msg := range messageChannel {
+			err := SendMessageWithPin(msg.chatID, msg.text, msg.mustPin)
+			if err != nil {
+				log.Printf("failed to send message to chatID %v: %v", msg.chatID, err)
+			}
+		}
+	}()
+}
+
 func SendTestMessage(text string) error {
 	return SendMessage(TestChatID, text)
 }
 
 func SendMessage(chatID int64, text string) error {
-	return SendMessageWithPin(chatID, text, false)
+	SendMessageWithPinAsync(chatID, text, false)
+	// todo: handle errors?
+	return nil
+}
+
+func SendMessageWithPinAsync(chatID int64, text string, mustPin bool) {
+	messageChannel <- telegramMessage{
+		chatID:  chatID,
+		text:    text,
+		mustPin: mustPin,
+	}
 }
 
 func SendMessageWithPin(chatID int64, text string, mustPin bool) error {
