@@ -62,14 +62,14 @@ func RunOnce() {
 	}
 
 	var count int
-	wg := sync.WaitGroup{}
+	wg := &sync.WaitGroup{}
 	for slug, chatIDs := range slugs {
 		wg.Add(1)
 		count += 1
-		go func(slug string, chatIDs []int64) {
+		go func(slug string, chatIDs []int64, wg *sync.WaitGroup) {
 			ProcessWithSlugAndChatIDs(slug, chatIDs)
 			wg.Done()
-		}(slug, chatIDs)
+		}(slug, chatIDs, wg)
 	}
 
 	// download info about all the unsubscribed blocks
@@ -79,10 +79,10 @@ func RunOnce() {
 		}
 		wg.Add(1)
 		count += 1
-		go func(slug string, chatIDs []int64) {
+		go func(slug string, chatIDs []int64, wg *sync.WaitGroup) {
 			ProcessWithSlugAndChatIDs(slug, chatIDs)
 			wg.Done()
-		}(slug, nil)
+		}(slug, nil, wg)
 	}
 	wg.Wait() // wait synchronously before triggering the next job
 	log.Printf("checked updates for %v projects", count)
