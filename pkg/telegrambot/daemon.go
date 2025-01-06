@@ -14,7 +14,7 @@ import (
 const (
 	invokeEvery = 1 * time.Minute
 
-	maxHttpThreads = 3
+	maxHttpThreads = 10
 
 	logfile = "logs/bot.log"
 )
@@ -136,9 +136,9 @@ func DownloadAndUpdateFile(blockSlug string) ([]string, error) {
 
 	flatMsgs, updateCallback, err := downloader.GetFlats(blockID)
 	if err != nil {
-		if err == downloader.ErrorZeroFlats {
-			return nil, errorNoNewFlats
-		}
+		//if err == downloader.ErrorZeroFlats {
+		//	return nil, errorNoNewFlats
+		//}
 		return nil, fmt.Errorf("error getting response from pik.ru: %v", err)
 	}
 
@@ -148,7 +148,7 @@ func DownloadAndUpdateFile(blockSlug string) ([]string, error) {
 	}
 
 	if len(flatMsgs) == 0 {
-		return nil, errorNoNewFlats
+		return nil, fmt.Errorf("got 0 flats for zhk %v", blockSlug)
 	}
 
 	log.Printf("Got flats in %v (envtype %v): %v", blockSlug, envtype, flatMsgs)
