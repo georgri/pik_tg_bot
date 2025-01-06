@@ -49,6 +49,8 @@ func RunForever() {
 }
 
 func RunOnce() {
+	log.Printf("begin to check for updates")
+
 	envType := util.GetEnvType()
 
 	// 1. Get map of block slug => subscribed channels
