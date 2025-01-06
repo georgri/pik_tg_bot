@@ -7,6 +7,7 @@ import (
 	"github.com/georgri/pik_tg_bot/pkg/util"
 	"log"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -56,14 +57,19 @@ func RunOnce() {
 
 	slugs := make(map[string][]int64, 10)
 
-	var count int
-
 	for _, channelInfo := range ChannelIDs[envType] {
 		slugs[channelInfo.BlockSlug] = append(slugs[channelInfo.BlockSlug], channelInfo.ChatID)
 	}
+
+	var count int
+	wg := sync.WaitGroup{}
 	for slug, chatIDs := range slugs {
+		wg.Add(1)
 		count += 1
-		go ProcessWithSlugAndChatIDs(slug, chatIDs)
+		go func(slug string, chatIDs []int64) {
+			ProcessWithSlugAndChatIDs(slug, chatIDs)
+			wg.Done()
+		}(slug, chatIDs)
 	}
 
 	// download info about all the unsubscribed blocks
@@ -71,9 +77,15 @@ func RunOnce() {
 		if _, ok := slugs[slug]; ok {
 			continue // already processed
 		}
+		wg.Add(1)
 		count += 1
-		go ProcessWithSlugAndChatIDs(slug, nil)
+		go func(slug string, chatIDs []int64) {
+			ProcessWithSlugAndChatIDs(slug, chatIDs)
+			wg.Done()
+		}(slug, nil)
 	}
+	wg.Wait() // wait synchronously before triggering the next job
+	log.Printf("checked updates for %v projects", count)
 }
 
 func ProcessWithSlugAndChatIDs(blockSlug string, chatIDs []int64) {
