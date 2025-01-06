@@ -14,6 +14,8 @@ import (
 const (
 	invokeEvery = 1 * time.Minute
 
+	maxHttpThreads = 3
+
 	logfile = "logs/bot.log"
 )
 
@@ -72,6 +74,10 @@ func RunOnce() {
 			ProcessWithSlugAndChatIDs(slug, chatIDs)
 			wg.Done()
 		}(slug, chatIDs, wg)
+
+		if count%maxHttpThreads == 0 {
+			wg.Wait()
+		}
 	}
 
 	// download info about all the unsubscribed blocks
@@ -85,6 +91,10 @@ func RunOnce() {
 			ProcessWithSlugAndChatIDs(slug, chatIDs)
 			wg.Done()
 		}(slug, nil, wg)
+
+		if count%maxHttpThreads == 0 {
+			wg.Wait()
+		}
 	}
 	wg.Wait() // wait synchronously before triggering the next job
 	log.Printf("checked updates for %v projects", count)
@@ -93,9 +103,9 @@ func RunOnce() {
 func ProcessWithSlugAndChatIDs(blockSlug string, chatIDs []int64) {
 	msgs, err := DownloadAndUpdateFile(blockSlug)
 	if err != nil {
-		if err == errorNoNewFlats {
-			return
-		}
+		//if err == errorNoNewFlats {
+		//	return
+		//}
 		log.Printf("error while updating flats: %v", err)
 		return
 	}
