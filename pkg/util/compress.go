@@ -1,4 +1,4 @@
-package backup_data
+package util
 
 import (
 	"archive/tar"
@@ -10,10 +10,8 @@ import (
 	"strings"
 )
 
-func compress(src string, buf io.Writer) error {
-	// tar > gzip > buf
+func Compress(src string, buf io.Writer) error {
 	zr := gzip.NewWriter(buf)
-	tw := tar.NewWriter(zr)
 
 	// is file a folder?
 	fi, err := os.Stat(src)
@@ -22,24 +20,20 @@ func compress(src string, buf io.Writer) error {
 	}
 	mode := fi.Mode()
 	if mode.IsRegular() {
-		// get header
-		header, err := tar.FileInfoHeader(fi, src)
-		if err != nil {
-			return err
-		}
-		// write header
-		if err := tw.WriteHeader(header); err != nil {
-			return err
-		}
+		// gzip > buf
+
 		// get content
 		data, err := os.Open(src)
 		if err != nil {
 			return err
 		}
-		if _, err := io.Copy(tw, data); err != nil {
+		if _, err := io.Copy(zr, data); err != nil {
 			return err
 		}
 	} else if mode.IsDir() { // folder
+		// tar > gzip > buf
+
+		tw := tar.NewWriter(zr)
 
 		// walk through every file in the folder
 		filepath.Walk(src, func(file string, fi os.FileInfo, err error) error {
@@ -69,14 +63,16 @@ func compress(src string, buf io.Writer) error {
 			}
 			return nil
 		})
+
+		// produce tar
+		if err := tw.Close(); err != nil {
+			return err
+		}
+
 	} else {
 		return fmt.Errorf("error: file type not supported")
 	}
 
-	// produce tar
-	if err := tw.Close(); err != nil {
-		return err
-	}
 	// produce gzip
 	if err := zr.Close(); err != nil {
 		return err
@@ -93,7 +89,7 @@ func validRelPath(p string) bool {
 	return true
 }
 
-func decompress(src io.Reader, dst string) error {
+func Decompress(src io.Reader, dst string) error {
 	// ungzip
 	zr, err := gzip.NewReader(src)
 	if err != nil {

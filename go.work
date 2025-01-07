@@ -5,6 +5,7 @@ use (
 	./pkg/backup_data
 	./pkg/downloader
 	./pkg/flatstorage
+	./pkg/logrotator
 	./pkg/telegrambot
 	./pkg/util
 )

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/georgri/pik_tg_bot/pkg/backup_data"
 	"github.com/georgri/pik_tg_bot/pkg/downloader"
+	"github.com/georgri/pik_tg_bot/pkg/logrotator"
 	"github.com/georgri/pik_tg_bot/pkg/util"
 	"log"
-	"os"
 	"sync"
 	"time"
 )
@@ -24,19 +24,13 @@ var (
 )
 
 func RunForever() {
-	// set up simple logging
-	f, err := os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		log.Fatalf("error opening file: %v", err)
-	}
-	defer func(f *os.File) {
-		err := f.Close()
-		if err != nil {
-			log.Printf("error while closing log file: %v", err)
-		}
-	}(f)
 
-	log.SetOutput(f)
+	err := logrotator.SetupLogging()
+	if err != nil {
+		panic(err)
+	}
+
+	go logrotator.RotateLogsForever()
 
 	go backup_data.BackupDataForever()
 
@@ -148,7 +142,7 @@ func DownloadAndUpdateFile(blockSlug string) ([]string, error) {
 	}
 
 	if len(flatMsgs) == 0 {
-		return nil, fmt.Errorf("got 0 flats for zhk %v", blockSlug)
+		return nil, fmt.Errorf("got 0 new flats for zhk %v", blockSlug)
 	}
 
 	log.Printf("Got flats in %v (envtype %v): %v", blockSlug, envtype, flatMsgs)

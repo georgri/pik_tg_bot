@@ -29,7 +29,7 @@ func ReadFlatStorage(fileName string) (*MessageData, error) {
 	FileMutex.RLock()
 	defer FileMutex.RUnlock()
 
-	if !FileExists(fileName) {
+	if !FileExistsNonBlocking(fileName) {
 		return msgData, nil
 	}
 
@@ -251,9 +251,10 @@ func GetStorageFileNameByBlockSlug(blockSlug string) string {
 }
 
 func FileExists(filename string) bool {
-	FileMutex.RLock()
-	defer FileMutex.RUnlock()
+	return FileExistsNonBlocking(filename)
+}
 
+func FileExistsNonBlocking(filename string) bool {
 	_, err := os.Stat(filename)
 	return !errors.Is(err, os.ErrNotExist)
 }
