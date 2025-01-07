@@ -1,6 +1,8 @@
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
-github.com/georgri/pik_tg_bot/pkg/util v0.0.0-20250102213435-d93a2de2ceca h1:sGLn0FwbnTZo5KGMgOnzT2NHALM8HEtCTsPCAHI//kE=
-github.com/georgri/pik_tg_bot/pkg/util v0.0.0-20250102213435-d93a2de2ceca/go.mod h1:q9JxM6QxirEARsgilIMZqjEgMawfYWomWmXocUGyPzM=
+github.com/georgri/pik_tg_bot/pkg/flatstorage v0.0.0-20250107031915-92e8f3dd43b7 h1:JmL45nYV+sYsrta0TO3KEh6c7zodsHG0LroUpP7CEMs=
+github.com/georgri/pik_tg_bot/pkg/flatstorage v0.0.0-20250107031915-92e8f3dd43b7/go.mod h1:cjitFT30kRR4zQrC/sjtyEPrF30ZvR9MXFaPq4wcxZ4=
+github.com/georgri/pik_tg_bot/pkg/util v0.0.0-20250107031915-92e8f3dd43b7 h1:sfzT+O2VL0by/Dc9euYcdZAK0+kwhaA/fok32B1QD4k=
+github.com/georgri/pik_tg_bot/pkg/util v0.0.0-20250107031915-92e8f3dd43b7/go.mod h1:q9JxM6QxirEARsgilIMZqjEgMawfYWomWmXocUGyPzM=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
 golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 h1:vr/HnozRka3pE4EsMEg1lgkXJkTFJCVUX+S/ZT6wYzM=
