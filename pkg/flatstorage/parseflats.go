@@ -174,8 +174,9 @@ func (md *MessageData) GetBlockSlug() string {
 }
 
 type AveragePriceKey struct {
-	BlockSlug string
-	Rooms     int8
+	BlockSlug  string
+	Rooms      int8
+	FinishType int8
 }
 
 type AveragePriceAggregator map[AveragePriceKey][]int
@@ -184,8 +185,9 @@ func (md *MessageData) CalcAveragePrices() {
 	aggregate := make(AveragePriceAggregator)
 	for i, flat := range md.Flats {
 		key := AveragePriceKey{
-			BlockSlug: flat.BlockSlug,
-			Rooms:     flat.Rooms,
+			BlockSlug:  flat.BlockSlug,
+			Rooms:      flat.Rooms,
+			FinishType: flat.FinishType,
 		}
 		aggregate[key] = append(aggregate[key], i)
 	}
