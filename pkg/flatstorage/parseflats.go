@@ -10,7 +10,13 @@ import (
 	"time"
 )
 
-const FlatValidInterval = 60 * time.Minute
+const (
+	FlatValidInterval       = 60 * time.Minute
+	PriceComparisonInterval = 7 * 24 * time.Hour
+
+	upArrow   = "⬆"
+	downArrow = "🔻"
+)
 
 // url example: https://flat.pik-service.ru/api/v1/filter/flat-by-block/1240?type=1,2&location=2,3&flatLimit=80&onlyFlats=1
 // source example:
@@ -42,8 +48,14 @@ type Flat struct {
 	FinishType     int8   `json:"finishType"`
 	SettlementDate string `json:"settlementDate"`
 
-	AveragePrice int64 `json:"averagePrice"`
-	OldPrice     int64 `json:"oldPrice"`
+	AveragePrice int64        `json:"averagePrice"`
+	OldPrice     int64        `json:"oldPrice"`
+	PriceHistory []PriceEntry `json:"priceHistory,omitempty"`
+}
+
+type PriceEntry struct {
+	Date  string `json:"date,omitempty"`
+	Price int64  `json:"price,omitempty"`
 }
 
 type MessageData struct {
@@ -251,6 +263,11 @@ func (f *Flat) String() string {
 		res += ", " + avgPrice
 	}
 
+	priceChange := f.formatPriceChange()
+	if priceChange != "" {
+		res += ", " + priceChange
+	}
+
 	return res
 }
 
@@ -275,6 +292,30 @@ func (f *Flat) formatAvgPrice() string {
 		return fmt.Sprintf("avg+%.1f%%", percentage)
 	}
 	return fmt.Sprintf("avg%.1f%%", percentage)
+}
+
+func (f *Flat) formatPriceChange() string {
+	if len(f.PriceHistory) == 0 {
+		return ""
+	}
+
+	weekAgo := time.Now().Add(-PriceComparisonInterval).Format(time.RFC3339)
+	var oldPrice int64
+	for _, pricePoint := range f.PriceHistory {
+		if pricePoint.Date < weekAgo {
+			oldPrice = pricePoint.Price
+		}
+	}
+
+	if oldPrice == 0 {
+		return ""
+	}
+
+	percentage := (float64(f.Price)/float64(oldPrice) - 1) * 100
+	if percentage >= 0 {
+		return fmt.Sprintf(upArrow+"%.1f%%", percentage)
+	}
+	return fmt.Sprintf(downArrow+"%.1f%%", -percentage)
 }
 
 // ex 2025-06-15 => 25Q3

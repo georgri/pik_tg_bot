@@ -39,7 +39,7 @@ func ReverseInPlace[T any](arr []T) {
 	}
 }
 
-func FilterSliceInPlace[T comparable](arr []T, check func(int) bool) []T {
+func FilterSliceInPlace[T any](arr []T, check func(int) bool) []T {
 	if len(arr) == 0 {
 		return arr
 	}
@@ -55,7 +55,7 @@ func FilterSliceInPlace[T comparable](arr []T, check func(int) bool) []T {
 	return arr[:size]
 }
 
-func FilterUnique[T, K comparable](arr []T, key func(int) K) []T {
+func FilterUnique[T any, K comparable](arr []T, key func(int) K) []T {
 	if len(arr) == 0 {
 		return arr
 	}
