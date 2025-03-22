@@ -11,6 +11,7 @@ import (
 
 const (
 	DumpCommand        = "dump"
+	DumpAvgCommand     = "dumpavg"
 	SubscribeCommand   = "sub"
 	UnsubscribeCommand = "unsub"
 )
@@ -23,7 +24,7 @@ func sendHello(chatID int64, username string) {
 	}
 }
 
-func sendList(chatID int64, dump bool) {
+func sendList(chatID int64, command string) {
 
 	subscribedTo := GetChatSubscriptions(chatID)
 
@@ -31,8 +32,8 @@ func sendList(chatID int64, dump bool) {
 	for _, comp := range util.SortedKeysByFunc(BlockSlugs, func(a, b string) bool {
 		return BlockSlugs[a].Name < BlockSlugs[b].Name
 	}) {
-		if dump {
-			complexes = append(complexes, BlockSlugs[comp].StringWithCommand(DumpCommand))
+		if strings.Contains(command, "dump") {
+			complexes = append(complexes, BlockSlugs[comp].StringWithCommand(command))
 		} else {
 			isSubscribed := subscribedTo[comp]
 			complexes = append(complexes, BlockSlugs[comp].StringWithSub(isSubscribed))
@@ -62,15 +63,15 @@ func validateSlug(chatID int64, slug string, command string) (string, error) {
 	_, slugIsValid := BlockSlugs[slug]
 
 	if len(slug) == 0 || !slugIsValid {
-		sendList(chatID, command == DumpCommand)
+		sendList(chatID, command)
 		return "", fmt.Errorf("slug is empty or invalid: %v", slug)
 	}
 	return slug, nil
 }
 
-func sendDump(chatID int64, slug string) {
+func sendDump(chatID int64, slug string, command string) {
 
-	slug, err := validateSlug(chatID, slug, DumpCommand)
+	slug, err := validateSlug(chatID, slug, command)
 	if err != nil {
 		log.Printf("failed to dump to %v: %v", chatID, err)
 		return
@@ -95,7 +96,7 @@ func sendDump(chatID int64, slug string) {
 		return allFlatsMessageData.Flats[i].RecentlyUpdated(now)
 	})
 
-	msg = allFlatsMessageData.String()
+	msg = allFlatsMessageData.StringWithSort(command == DumpAvgCommand)
 	if len(allFlatsMessageData.Flats) == 0 {
 		msg = fmt.Sprintf("No known flats for complex %v", slug)
 	}

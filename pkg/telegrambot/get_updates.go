@@ -1,6 +1,7 @@
 package telegrambot
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/georgri/pik_tg_bot/pkg/util"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -80,7 +82,7 @@ type BotUpdatesStruct struct {
 	Result []*UpdateStruct `json:"result"`
 }
 
-func GetUpdatesForever() {
+func GetUpdatesForever(ctx context.Context, wg *sync.WaitGroup) {
 	log.Printf("polling getUpdates forever...")
 	for {
 		res, err := GetUpdatesOnce()
@@ -89,7 +91,14 @@ func GetUpdatesForever() {
 			time.Sleep(getUpdatesErrorCooldown)
 			continue
 		}
-		ProcessUpdates(res)
+
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		ProcessUpdates(res, wg)
 	}
 }
 
@@ -141,10 +150,14 @@ func GetUpdatesOnce() (*BotUpdatesStruct, error) {
 	return updates, nil
 }
 
-func ProcessUpdates(updates *BotUpdatesStruct) {
+func ProcessUpdates(updates *BotUpdatesStruct, wg *sync.WaitGroup) {
 	if updates == nil {
 		return
 	}
+
+	wg.Add(1)
+	defer wg.Done()
+
 	for _, update := range updates.Result {
 		processUpdate(update)
 		LatestKnownUpdateID = util.Max(LatestKnownUpdateID, update.UpdateId)
@@ -178,11 +191,13 @@ func processUpdate(update *UpdateStruct) {
 		case "hello":
 			sendHello(update.Message.Chat.Id, update.Message.From.Username)
 		case "list":
-			sendList(update.Message.Chat.Id, false)
+			sendList(update.Message.Chat.Id, "list")
 		case "start":
-			sendList(update.Message.Chat.Id, false)
+			sendList(update.Message.Chat.Id, "start")
 		case DumpCommand:
-			sendDump(update.Message.Chat.Id, args)
+			sendDump(update.Message.Chat.Id, args, DumpCommand)
+		case DumpAvgCommand:
+			sendDump(update.Message.Chat.Id, args, DumpAvgCommand)
 		case SubscribeCommand:
 			subscribeChat(update.Message.Chat.Id, args)
 		case UnsubscribeCommand:

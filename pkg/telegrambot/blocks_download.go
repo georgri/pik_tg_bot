@@ -1,6 +1,7 @@
 package telegrambot
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/georgri/pik_tg_bot/pkg/downloader"
@@ -8,6 +9,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -53,9 +55,15 @@ func DownloadBlocks() (*BlocksFileData, error) {
 	return blockData, nil
 }
 
-func UpdateBlocksForever() {
+func UpdateBlocksForever(ctx context.Context, wg *sync.WaitGroup) {
 	for {
-		err := UpdateBlocksOnce()
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		err := UpdateBlocksOnce(wg)
 		if err != nil {
 			log.Printf("update blocks failed: %v", err)
 		}
@@ -63,7 +71,10 @@ func UpdateBlocksForever() {
 	}
 }
 
-func UpdateBlocksOnce() error {
+func UpdateBlocksOnce(wg *sync.WaitGroup) error {
+	wg.Add(1)
+	defer wg.Done()
+
 	blocks, err := DownloadBlocks()
 	if err != nil {
 		return fmt.Errorf("unable to download blocks: %v", err)

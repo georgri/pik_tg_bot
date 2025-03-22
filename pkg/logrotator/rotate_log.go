@@ -2,6 +2,7 @@ package logrotator
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/georgri/pik_tg_bot/pkg/flatstorage"
 	"github.com/georgri/pik_tg_bot/pkg/util"
@@ -117,9 +118,15 @@ func DeleteExtraLogFiles() error {
 	return nil
 }
 
-func RotateLogsForever() {
+func RotateLogsForever(ctx context.Context, wg *sync.WaitGroup) {
 	for {
-		err := RotateLogsOnce()
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		err := RotateLogsOnce(wg)
 		if err != nil {
 			log.Printf("error while rotating logs: %v", err)
 		}
@@ -133,7 +140,10 @@ func GetCurrentLogFile() string {
 	return fmt.Sprintf("%v/bot-%v-%v.log", LogFolder, hostname, yesterday.Format(time.DateOnly))
 }
 
-func RotateLogsOnce() error {
+func RotateLogsOnce(wg *sync.WaitGroup) error {
+	wg.Add(1)
+	defer wg.Done()
+
 	// check if log file with yesterday's name exists
 	logFileName := GetCurrentLogFile()
 	archiveName := logFileName + ".gz"
@@ -187,4 +197,15 @@ func SetupLogging() error {
 	}
 
 	return nil
+}
+
+func CloseLog() {
+	log.SetOutput(os.Stderr)
+	if logFile != nil {
+		err := logFile.Close()
+		if err != nil {
+			log.Fatalf("failed to close log file")
+		}
+	}
+	return
 }

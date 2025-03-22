@@ -2,6 +2,7 @@ package backup_data
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/georgri/pik_tg_bot/pkg/util"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"sync"
 	"time"
 )
 
@@ -111,10 +113,15 @@ func DeleteExtraBackupFiles() error {
 	return nil
 }
 
-func BackupDataForever() {
+func BackupDataForever(ctx context.Context, wg *sync.WaitGroup) {
 	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
 		log.Printf("backing up data...")
-		err := BackupDataOnce()
+		err := BackupDataOnce(wg)
 		if err != nil {
 			log.Printf("error while backing up data: %v", err)
 		}
@@ -122,7 +129,10 @@ func BackupDataForever() {
 	}
 }
 
-func BackupDataOnce() error {
+func BackupDataOnce(wg *sync.WaitGroup) error {
+	wg.Add(1)
+	defer wg.Done()
+
 	err := ArchiveDataFolder()
 	if err != nil {
 		return err

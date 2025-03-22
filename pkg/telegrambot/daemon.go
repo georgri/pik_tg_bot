@@ -1,13 +1,16 @@
 package telegrambot
 
 import (
+	"context"
 	"fmt"
 	"github.com/georgri/pik_tg_bot/pkg/backup_data"
 	"github.com/georgri/pik_tg_bot/pkg/downloader"
 	"github.com/georgri/pik_tg_bot/pkg/logrotator"
 	"github.com/georgri/pik_tg_bot/pkg/util"
 	"log"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -16,11 +19,11 @@ const (
 
 	maxHttpThreads = 10
 
-	logfile = "logs/bot.log"
+	shutdownTimeout = 10 * time.Second
 )
 
 var (
-	errorNoNewFlats = fmt.Errorf("no new flats")
+	wg = &sync.WaitGroup{}
 )
 
 func RunForever() {
@@ -30,21 +33,54 @@ func RunForever() {
 		panic(err)
 	}
 
-	go logrotator.RotateLogsForever()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGSTOP)
+	defer stop()
 
-	go backup_data.BackupDataForever()
+	go logrotator.RotateLogsForever(ctx, wg)
 
-	go UpdateBlocksForever()
+	go backup_data.BackupDataForever(ctx, wg)
 
-	go GetUpdatesForever()
+	go UpdateBlocksForever(ctx, wg)
 
+	go GetUpdatesForever(ctx, wg)
+
+	go RunUpdateFlatsForever(ctx, wg)
+
+	<-ctx.Done()
+
+	// wait for max 10 seconds
+	shutdownCtx, cancelFunc := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancelFunc()
+
+	var c chan struct{}
+	go func(c chan struct{}) {
+		wg.Wait()
+		logrotator.CloseLog()
+		c <- struct{}{}
+	}(c)
+
+	select {
+	case <-shutdownCtx.Done():
+		log.Fatalf("failed to exit gracefully - shutdown timeout reached")
+	case <-c:
+		log.Printf("shutting down gracefully")
+	}
+}
+
+func RunUpdateFlatsForever(ctx context.Context, wg *sync.WaitGroup) {
 	for {
-		RunOnce()
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		RunUpdateFlatsOnce(ctx, wg)
 		time.Sleep(invokeEvery)
 	}
 }
 
-func RunOnce() {
+func RunUpdateFlatsOnce(ctx context.Context, wg *sync.WaitGroup) {
 	log.Printf("begin to check for updates")
 
 	envType := util.GetEnvType()
@@ -60,17 +96,26 @@ func RunOnce() {
 	}
 
 	var count int
-	wg := &sync.WaitGroup{}
+	threadsWg := &sync.WaitGroup{}
 	for slug, chatIDs := range slugs {
+
+		select {
+		case <-ctx.Done():
+			break
+		default:
+		}
+
+		threadsWg.Add(1)
 		wg.Add(1)
 		count += 1
-		go func(slug string, chatIDs []int64, wg *sync.WaitGroup) {
+		go func(slug string, chatIDs []int64, threadsWg, wg *sync.WaitGroup) {
 			ProcessWithSlugAndChatIDs(slug, chatIDs)
+			threadsWg.Done()
 			wg.Done()
-		}(slug, chatIDs, wg)
+		}(slug, chatIDs, threadsWg, wg)
 
 		if count%maxHttpThreads == 0 {
-			wg.Wait()
+			threadsWg.Wait()
 		}
 	}
 
@@ -79,18 +124,27 @@ func RunOnce() {
 		if _, ok := slugs[slug]; ok {
 			continue // already processed
 		}
+
+		select {
+		case <-ctx.Done():
+			break
+		default:
+		}
+
+		threadsWg.Add(1)
 		wg.Add(1)
 		count += 1
-		go func(slug string, chatIDs []int64, wg *sync.WaitGroup) {
+		go func(slug string, chatIDs []int64, threadsWg, wg *sync.WaitGroup) {
 			ProcessWithSlugAndChatIDs(slug, chatIDs)
+			threadsWg.Done()
 			wg.Done()
-		}(slug, nil, wg)
+		}(slug, nil, threadsWg, wg)
 
 		if count%maxHttpThreads == 0 {
-			wg.Wait()
+			threadsWg.Wait()
 		}
 	}
-	wg.Wait() // wait synchronously before triggering the next job
+	threadsWg.Wait() // wait synchronously before triggering the next job
 	log.Printf("checked updates for %v projects", count)
 }
 

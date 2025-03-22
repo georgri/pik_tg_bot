@@ -124,11 +124,11 @@ func (f *Flat) GetPriceDropPercentage() float64 {
 }
 
 func (f *Flat) GetPriceBelowAveragePercentage() float64 {
-	if f == nil || f.AveragePrice == 0 {
+	if f == nil || f.Area == 0 || f.AveragePrice == 0 {
 		return 0
 	}
 
-	return ((float64(f.Price) / float64(f.AveragePrice)) - 1) * 100
+	return ((float64(f.Price)/f.Area)/float64(f.AveragePrice) - 1) * 100
 }
 
 // String print in human readable telegram friendly format
@@ -140,11 +140,21 @@ func (f *Flat) GetPriceBelowAveragePercentage() float64 {
 // {number of Flats} новых объектов в ЖК "Второй Нагатинский" (м.Нагатинская (color #ACADAF)):
 // Корпус 1.3 #831859[url link to flat]: 32.6m, 1r, f19, 12_756_380rub,
 func (md *MessageData) String() string {
+	return md.StringWithSort(false)
+}
 
-	// sorting by price
-	sort.Slice(md.Flats, func(i, j int) bool {
-		return md.Flats[i].Price < md.Flats[j].Price
-	})
+func (md *MessageData) StringWithSort(sortByAvg bool) string {
+
+	if sortByAvg {
+		sort.Slice(md.Flats, func(i, j int) bool {
+			return md.Flats[i].GetPriceBelowAveragePercentage() < md.Flats[j].GetPriceBelowAveragePercentage()
+		})
+	} else {
+		// sorting by price
+		sort.Slice(md.Flats, func(i, j int) bool {
+			return md.Flats[i].Price < md.Flats[j].Price
+		})
+	}
 
 	res := md.MakeHeader()
 
@@ -287,7 +297,7 @@ func (f *Flat) formatAvgPrice() string {
 		return ""
 	}
 
-	percentage := ((float64(f.Price)/f.Area)/float64(f.AveragePrice) - 1) * 100
+	percentage := f.GetPriceBelowAveragePercentage()
 	if percentage >= 0 {
 		return fmt.Sprintf("avg+%.1f%%", percentage)
 	}
