@@ -184,7 +184,7 @@ func MergeNewFlatsIntoOld(oldMsg, newMsg *MessageData) *MessageData {
 			newMsg.Flats[i].OldPrice = oldInfo.OldPrice
 			newMsg.Flats[i].PriceHistory = oldInfo.PriceHistory
 
-			if newMsg.Flats[i].Price != newMsg.Flats[i].OldPrice {
+			if newMsg.Flats[i].Price != newMsg.Flats[i].OldPrice || len(newMsg.Flats[i].PriceHistory) == 0 {
 				newMsg.Flats[i].PriceHistory = append(newMsg.Flats[i].PriceHistory, PriceEntry{
 					Date:  now,
 					Price: newMsg.Flats[i].Price,
