@@ -17,6 +17,7 @@ const (
 	storageDir    = "data"
 	storageFormat = "json"
 
+	DefaultBelowAverageThreshold            = 10
 	DefaultPriceDropPercentThreshold        = 15
 	DefaultExtremePriceDropPercentThreshold = 30
 )
@@ -82,7 +83,7 @@ func FilterWithFlatStorageHelper(oldMsg, newMsg *MessageData) []string {
 			continue // skip new flats
 		}
 		newMsg.Flats[i].OldPrice = oldMsg.Flats[oldIndex].Price
-		if newMsg.Flats[i].GetPriceDropPercentage() <= -DefaultExtremePriceDropPercentThreshold {
+		if newMsg.Flats[i].GetPriceDropPercentage() <= -DefaultExtremePriceDropPercentThreshold && newMsg.Flats[i].GetPriceBelowAveragePercentage() <= -DefaultBelowAverageThreshold {
 			extremePriceDropList = append(extremePriceDropList, newMsg.Flats[i])
 		} else if newMsg.Flats[i].GetPriceDropPercentage() <= -DefaultPriceDropPercentThreshold {
 			priceDropList = append(priceDropList, newMsg.Flats[i])
