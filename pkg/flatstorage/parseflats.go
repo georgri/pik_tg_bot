@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/georgri/pik_tg_bot/pkg/util"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -21,7 +22,8 @@ const (
 
 	PercentageChangeEpsilon = 0.05
 
-	windowPeriod = 2 * 7 * 24 * time.Hour
+	windowPeriod      = 2 * 7 * 24 * time.Hour
+	smallWindowPeriod = 24 * time.Hour
 )
 
 // url example: https://flat.pik-service.ru/api/v1/filter/flat-by-block/1240?type=1,2&location=2,3&flatLimit=80&onlyFlats=1
@@ -245,6 +247,8 @@ func (md *MessageData) StringInfo(stats FlatStats) string {
 		for _, pricePoint := range minSeries {
 			flats = append(flats, fmt.Sprintf("%v", pricePoint))
 		}
+	} else {
+		flats = append(flats, fmt.Sprintf("not enough data to calc min/max series :("))
 	}
 	if len(maxSeries) > 0 {
 		flats = append(flats, fmt.Sprintf("maximum prices for similar flats:"))
@@ -260,9 +264,9 @@ func (md *MessageData) StringInfo(stats FlatStats) string {
 
 func CalcPriceMinMaxRangeSeries(flats []Flat) (PriceHistory, PriceHistory) {
 	// make single slice with all the data
-	history := make(PriceHistory, len(flats))
+	history := make(PriceHistory, 0, len(flats))
 	for i := range flats {
-		history = append(history, flats[i].PriceHistory...)
+		history = append(history, flats[i].GetPriceHistory()...)
 	}
 
 	// sort by date
@@ -276,11 +280,13 @@ func CalcPriceMinMaxRangeSeries(flats []Flat) (PriceHistory, PriceHistory) {
 
 	// make two weeks window
 	for i, pricePoint := range history {
-		pointDate, err := time.Parse(pricePoint.Date, time.RFC3339)
+		pointDate, err := time.Parse(time.RFC3339, pricePoint.Date)
 		if err != nil {
+			log.Printf("failed to parse date %v: %v", pricePoint.Date, err)
 			continue
 		}
-		leftTimeStr := pointDate.Add(windowPeriod).Format(time.RFC3339)
+		leftTimeStr := pointDate.Add(-windowPeriod).Format(time.RFC3339)
+		smallWindowTimeStr := pointDate.Add(-smallWindowPeriod).Format(time.RFC3339)
 
 		// update minDeque and maxDeque: pop from both while price is lower/higher
 		for len(minDeque) > 0 && minDeque[len(minDeque)-1].Price >= pricePoint.Price {
@@ -306,12 +312,20 @@ func CalcPriceMinMaxRangeSeries(flats []Flat) (PriceHistory, PriceHistory) {
 		maxDeque = append(maxDeque, pricePoint)
 
 		// add first elems to minSeries and maxSeries
-		if len(minSeries) == 0 || minSeries[0] != minDeque[0] {
-			minSeries = append(minSeries, minDeque[0])
+		if len(minSeries) == 0 || minSeries[len(minSeries)-1] != minDeque[0] {
+			if len(minSeries) > 0 && minSeries[len(minSeries)-1].Date > smallWindowTimeStr {
+				minSeries[len(minSeries)-1].Price = minDeque[0].Price
+			} else {
+				minSeries = append(minSeries, minDeque[0])
+			}
 		}
 
-		if len(maxSeries) == 0 || maxSeries[0] != maxDeque[0] {
-			maxSeries = append(maxSeries, maxDeque[0])
+		if len(maxSeries) == 0 || maxSeries[len(maxSeries)-1] != maxDeque[0] {
+			if len(maxSeries) > 0 && maxSeries[len(maxSeries)-1].Date > smallWindowTimeStr {
+				maxSeries[len(maxSeries)-1].Price = maxDeque[0].Price
+			} else {
+				maxSeries = append(maxSeries, maxDeque[0])
+			}
 		}
 	}
 
