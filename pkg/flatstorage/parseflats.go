@@ -20,6 +20,8 @@ const (
 	SimilarAreaThresholdPercent = 2
 
 	PercentageChangeEpsilon = 0.05
+
+	windowPeriod = 2 * 7 * 24 * time.Hour
 )
 
 // url example: https://flat.pik-service.ru/api/v1/filter/flat-by-block/1240?type=1,2&location=2,3&flatLimit=80&onlyFlats=1
@@ -236,9 +238,84 @@ func (md *MessageData) StringInfo(stats FlatStats) string {
 		}
 	}
 
+	minSeries, maxSeries := CalcPriceMinMaxRangeSeries(stats.SimilarFlats)
+
+	if len(minSeries) > 0 {
+		flats = append(flats, fmt.Sprintf("minimum prices for similar flats:"))
+		for _, pricePoint := range minSeries {
+			flats = append(flats, fmt.Sprintf("%v", pricePoint))
+		}
+	}
+	if len(maxSeries) > 0 {
+		flats = append(flats, fmt.Sprintf("maximum prices for similar flats:"))
+		for _, pricePoint := range maxSeries {
+			flats = append(flats, fmt.Sprintf("%v", pricePoint))
+		}
+	}
+
 	res += "\n" + strings.Join(flats, "\n") // try <br>
 
 	return res
+}
+
+func CalcPriceMinMaxRangeSeries(flats []Flat) (PriceHistory, PriceHistory) {
+	// make single slice with all the data
+	history := make(PriceHistory, len(flats))
+	for i := range flats {
+		history = append(history, flats[i].PriceHistory...)
+	}
+
+	// sort by date
+	sort.Slice(history, func(i, j int) bool {
+		return history[i].Date < history[j].Date
+	})
+
+	var minSeries, maxSeries PriceHistory
+	var minDeque, maxDeque PriceHistory
+	leftIndex := 0
+
+	// make two weeks window
+	for i, pricePoint := range history {
+		pointDate, err := time.Parse(pricePoint.Date, time.RFC3339)
+		if err != nil {
+			continue
+		}
+		leftTimeStr := pointDate.Add(windowPeriod).Format(time.RFC3339)
+
+		// update minDeque and maxDeque: pop from both while price is lower/higher
+		for len(minDeque) > 0 && minDeque[len(minDeque)-1].Price >= pricePoint.Price {
+			minDeque = minDeque[:len(minDeque)-1]
+		}
+		for len(maxDeque) > 0 && maxDeque[len(maxDeque)-1].Price <= pricePoint.Price {
+			maxDeque = maxDeque[:len(maxDeque)-1]
+		}
+
+		// shift left window pointer, get rid of first elements in deques if needed
+		for leftIndex < i && history[leftIndex].Date < leftTimeStr {
+			for len(minDeque) > 0 && minDeque[0] == history[leftIndex] {
+				minDeque = minDeque[1:]
+			}
+			for len(maxDeque) > 0 && maxDeque[0] == history[leftIndex] {
+				maxDeque = maxDeque[1:]
+			}
+			leftIndex++
+		}
+
+		// push current elem into deques
+		minDeque = append(minDeque, pricePoint)
+		maxDeque = append(maxDeque, pricePoint)
+
+		// add first elems to minSeries and maxSeries
+		if len(minSeries) == 0 || minSeries[0] != minDeque[0] {
+			minSeries = append(minSeries, minDeque[0])
+		}
+
+		if len(maxSeries) == 0 || maxSeries[0] != maxDeque[0] {
+			maxSeries = append(maxSeries, maxDeque[0])
+		}
+	}
+
+	return minSeries, maxSeries
 }
 
 // MakeHeader example:
