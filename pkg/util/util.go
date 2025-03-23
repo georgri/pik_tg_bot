@@ -108,3 +108,10 @@ func SortedKeysByFunc[K constraints.Ordered, V any](m map[K]V, comp func(K, K) b
 	})
 	return keys
 }
+
+func EmbedSlug(slug string) string {
+	if strings.Contains(slug, "/") {
+		_, slug, _ = strings.Cut(slug, "/")
+	}
+	return strings.ReplaceAll(strings.ReplaceAll(slug, "/", "__"), "-", "_")
+}

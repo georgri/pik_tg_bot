@@ -12,6 +12,7 @@ import (
 const (
 	DumpCommand        = "dump"
 	DumpAvgCommand     = "dumpavg"
+	DumpInfoCommand    = "dumpinfo"
 	SubscribeCommand   = "sub"
 	UnsubscribeCommand = "unsub"
 )
@@ -60,7 +61,7 @@ func GetChatSubscriptions(chatID int64) map[string]bool {
 func validateSlug(chatID int64, slug string, command string) (string, error) {
 	slug = strings.TrimLeft(strings.TrimSpace(slug), "/")
 
-	_, slugIsValid := BlockSlugs[slug]
+	_, slugIsValid := BlockSlugs[util.EmbedSlug(slug)]
 
 	if len(slug) == 0 || !slugIsValid {
 		sendList(chatID, command)
@@ -96,7 +97,7 @@ func sendDump(chatID int64, slug string, command string) {
 		return allFlatsMessageData.Flats[i].RecentlyUpdated(now)
 	})
 
-	msg = allFlatsMessageData.StringWithSort(command == DumpAvgCommand)
+	msg = allFlatsMessageData.StringWithOptions(command == DumpAvgCommand, command == DumpInfoCommand)
 	if len(allFlatsMessageData.Flats) == 0 {
 		msg = fmt.Sprintf("No known flats for complex %v", slug)
 	}
@@ -157,6 +158,7 @@ func CheckSubscribed(chatID int64, slug string) bool {
 }
 
 func subscribeChat(chatID int64, slug string) {
+	slug = util.EmbedSlug(slug)
 
 	slug, err := validateSlug(chatID, slug, SubscribeCommand)
 	if err != nil {
@@ -164,7 +166,7 @@ func subscribeChat(chatID int64, slug string) {
 		return
 	}
 
-	embeddedSlug := embedSlug(slug)
+	embeddedSlug := util.EmbedSlug(slug)
 
 	if CheckSubscribed(chatID, slug) {
 		// send already subscribed message
@@ -206,7 +208,7 @@ func unsubscribeChat(chatID int64, slug string) {
 		return
 	}
 
-	embeddedSlug := embedSlug(slug)
+	embeddedSlug := util.EmbedSlug(slug)
 
 	if !CheckSubscribed(chatID, slug) {
 		// send already subscribed message
@@ -240,12 +242,4 @@ func unsubscribeChat(chatID int64, slug string) {
 	if err != nil {
 		log.Printf("failed to send unsubscribed message to %v: %v", chatID, err)
 	}
-}
-
-func embedSlug(slug string) string {
-	return strings.ReplaceAll(strings.ReplaceAll(slug, "/", "__"), "-", "_")
-}
-
-func unEmbedSlug(slug string) string {
-	return strings.ReplaceAll(strings.ReplaceAll(slug, "__", "/"), "_", "-")
 }

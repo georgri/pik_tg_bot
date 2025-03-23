@@ -186,7 +186,7 @@ func processUpdate(update *UpdateStruct) {
 		if strings.Contains(command, "_") {
 			command, args, _ = strings.Cut(command, "_")
 		}
-		args = unEmbedSlug(args)
+		//args = util.UnEmbedSlug(args)
 		switch command {
 		case "hello":
 			sendHello(update.Message.Chat.Id, update.Message.From.Username)
@@ -198,6 +198,8 @@ func processUpdate(update *UpdateStruct) {
 			sendDump(update.Message.Chat.Id, args, DumpCommand)
 		case DumpAvgCommand:
 			sendDump(update.Message.Chat.Id, args, DumpAvgCommand)
+		case DumpInfoCommand:
+			sendDump(update.Message.Chat.Id, args, DumpInfoCommand)
 		case SubscribeCommand:
 			subscribeChat(update.Message.Chat.Id, args)
 		case UnsubscribeCommand:

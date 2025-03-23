@@ -250,6 +250,7 @@ func GetStorageFileName(msg *MessageData) string {
 }
 
 func GetStorageFileNameByBlockSlugAndEnv(blockSlug string) string {
+	blockSlug = util.EmbedSlug(blockSlug)
 	return fmt.Sprintf("%v/%v_%v.%v", storageDir, blockSlug, util.GetEnvType().String(), storageFormat)
 }
 
@@ -259,7 +260,7 @@ func GetStorageFileNameByBlockSlug(blockSlug string) string {
 	if FileExists(targetFileName) {
 		return targetFileName
 	}
-	fileNameWithChatID := fmt.Sprintf("%v/%v_%v.%v", storageDir, blockSlug, 0, storageFormat)
+	fileNameWithChatID := fmt.Sprintf("%v/%v_%v.%v", storageDir, util.EmbedSlug(blockSlug), 0, storageFormat)
 	if FileExists(fileNameWithChatID) {
 		return fileNameWithChatID
 	}

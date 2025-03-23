@@ -34,7 +34,7 @@ func init() {
 			panic(err)
 		}
 		slug := strings.Trim(blockSlice[2], "/")
-		BlockSlugs[slug] = BlockInfo{
+		BlockSlugs[util.EmbedSlug(slug)] = BlockInfo{
 			ID:   int64(id),
 			Slug: slug,
 			Name: blockSlice[1],
@@ -43,7 +43,10 @@ func init() {
 }
 
 func GetBlockIDBySlug(slug string) int64 {
-	blockInfo, _ := BlockSlugs[slug]
+	blockInfo, ok := BlockSlugs[util.EmbedSlug(slug)]
+	if !ok {
+		log.Printf("Failed to get blockID by slug %v; embedded: %v", slug, util.EmbedSlug(slug))
+	}
 	return blockInfo.ID
 }
 
@@ -67,7 +70,7 @@ func (b BlockInfo) StringWithCommand(command string) string {
 	if command == UnsubscribeCommand {
 		prefix = "✅"
 	}
-	embeddedSlug := embedSlug(b.Slug)
+	embeddedSlug := util.EmbedSlug(b.Slug)
 	return fmt.Sprintf("%v<a href=\"%v\">%v</a> %v", prefix, GetBlockURLBySlug(b.Slug), b.Name, GetEmbeddedCommand(command, embeddedSlug))
 }
 
@@ -117,10 +120,10 @@ func MergeBlocksWithHardcode(blocks *BlocksFileData) ([]BlockInfo, error) {
 	var newBlocks []BlockInfo
 	for _, block := range blocks.BlockList {
 		block.Slug = strings.TrimLeft(block.Slug, "/")
-		if _, ok := BlockSlugs[block.Slug]; !ok {
+		if _, ok := BlockSlugs[util.EmbedSlug(block.Slug)]; !ok {
 			newBlocks = append(newBlocks, block)
 		}
-		BlockSlugs[block.Slug] = block
+		BlockSlugs[util.EmbedSlug(block.Slug)] = block
 	}
 	return newBlocks, nil
 }

@@ -140,10 +140,10 @@ func (f *Flat) GetPriceBelowAveragePercentage() float64 {
 // {number of Flats} новых объектов в ЖК "Второй Нагатинский" (м.Нагатинская (color #ACADAF)):
 // Корпус 1.3 #831859[url link to flat]: 32.6m, 1r, f19, 12_756_380rub,
 func (md *MessageData) String() string {
-	return md.StringWithSort(false)
+	return md.StringWithOptions(false, false)
 }
 
-func (md *MessageData) StringWithSort(sortByAvg bool) string {
+func (md *MessageData) StringWithOptions(sortByAvg bool, withInfo bool) string {
 
 	if sortByAvg {
 		sort.Slice(md.Flats, func(i, j int) bool {
@@ -160,7 +160,7 @@ func (md *MessageData) StringWithSort(sortByAvg bool) string {
 
 	flats := make([]string, 0, len(md.Flats))
 	for _, flat := range md.Flats {
-		flats = append(flats, flat.String())
+		flats = append(flats, flat.StringWithOptions(withInfo))
 	}
 
 	res += "\n" + strings.Join(flats, "\n") // try <br>
@@ -241,6 +241,10 @@ func (f *Flat) RecentlyUpdated(now time.Time) bool {
 // String example:
 // Корпус 1.3 #831859[url link to flat]: 32.6m, 1r, f19, 12_756_380rub,
 func (f *Flat) String() string {
+	return f.StringWithOptions(false)
+}
+
+func (f *Flat) StringWithOptions(withInfo bool) string {
 	if f == nil {
 		return ""
 	}
@@ -276,6 +280,11 @@ func (f *Flat) String() string {
 	priceChange := f.formatPriceChange()
 	if priceChange != "" {
 		res += ", " + priceChange
+	}
+
+	if withInfo {
+		infoCommand := fmt.Sprintf("info_%v_%v", f.BlockSlug, f.ID)
+		res += ", " + fmt.Sprintf(`<a href="t.me/%v?start=%v">info</a>`, util.GetBotUsername(), infoCommand)
 	}
 
 	return res
