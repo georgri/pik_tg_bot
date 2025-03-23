@@ -280,7 +280,7 @@ func CalcPriceMinMaxRangeSeries(flats []Flat) (PriceHistory, PriceHistory) {
 
 	// make two weeks window
 	for i, pricePoint := range history {
-		if pricePoint.Status != "reserved" {
+		if pricePoint.Status != "reserve" {
 			continue
 		}
 		pointDate, err := time.Parse(time.RFC3339, pricePoint.Date)
