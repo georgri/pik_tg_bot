@@ -186,12 +186,16 @@ func MergeNewFlatsIntoOld(oldMsg, newMsg *MessageData) *MessageData {
 			newMsg.Flats[i].OldPrice = oldInfo.Price
 			newMsg.Flats[i].PriceHistory = oldInfo.PriceHistory
 
-			if len(newMsg.Flats[i].PriceHistory) == 0 || newMsg.Flats[i].Price != oldInfo.Price || newMsg.Flats[i].Status != oldInfo.Status {
+			size := len(oldInfo.PriceHistory)
+
+			if size == 0 || newMsg.Flats[i].Price != oldInfo.Price || newMsg.Flats[i].Status != oldInfo.Status {
 				newMsg.Flats[i].PriceHistory = append(newMsg.Flats[i].PriceHistory, PriceEntry{
 					Date:   now,
 					Price:  newMsg.Flats[i].Price,
 					Status: newMsg.Flats[i].Status,
 				})
+			} else if oldInfo.PriceHistory[size-1].Status == "" {
+				newMsg.Flats[i].PriceHistory[size-1].Status = newMsg.Flats[i].Status
 			}
 		} else {
 			// for new flats always add the current price
