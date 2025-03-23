@@ -16,6 +16,8 @@ const (
 
 	upArrow   = "⬆"
 	downArrow = "🔻"
+
+	SimilarAreaThresholdPercent = 2
 )
 
 // url example: https://flat.pik-service.ru/api/v1/filter/flat-by-block/1240?type=1,2&location=2,3&flatLimit=80&onlyFlats=1
@@ -63,6 +65,10 @@ type MessageData struct {
 	Flats []Flat `json:"flats"`
 
 	LastPage int
+}
+
+type FlatStats struct {
+	SimilarFlats []Flat
 }
 
 type PriceDropMessageData struct {
@@ -132,6 +138,19 @@ func (f *Flat) GetPriceBelowAveragePercentage() float64 {
 	return ((float64(f.Price)/f.Area)/float64(f.AveragePrice) - 1) * 100
 }
 
+func (f *Flat) IsSimilar(another Flat) bool {
+	if f == nil {
+		return false
+	}
+
+	if f.Rooms != another.Rooms || f.FinishType != another.FinishType {
+		return false
+	}
+
+	// area is similar (+-2%)
+	return f.Area <= another.Area/100.0*(100.0+SimilarAreaThresholdPercent) && f.Area >= another.Area/100.0*(100.0-SimilarAreaThresholdPercent)
+}
+
 // String print in human readable telegram friendly format
 // example input:
 // {831859 32.6 19 {Нагатинская #ACADAF} 12756380 1 free
@@ -169,7 +188,7 @@ func (md *MessageData) StringWithOptions(sortByAvg bool, withInfo bool) string {
 	return res
 }
 
-func (md *MessageData) StringInfo() string {
+func (md *MessageData) StringInfo(stats FlatStats) string {
 	if len(md.Flats) == 0 {
 		return ""
 	}
@@ -181,6 +200,15 @@ func (md *MessageData) StringInfo() string {
 		flats = append(flats, flat.String())
 		// TODO: format dates and prices nicely
 		flats = append(flats, fmt.Sprintf("%v", flat.PriceHistory))
+	}
+
+	if len(stats.SimilarFlats) > 0 {
+		flats = append(flats, fmt.Sprintf("info about similar flats in complex %v:", md.Flats[0].BlockSlug))
+		for _, flat := range stats.SimilarFlats {
+			flats = append(flats, flat.String())
+			// TODO: format dates and prices nicely
+			flats = append(flats, fmt.Sprintf("%v", flat.PriceHistory))
+		}
 	}
 
 	res += "\n" + strings.Join(flats, "\n") // try <br>

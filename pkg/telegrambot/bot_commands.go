@@ -137,6 +137,9 @@ func sendInfo(chatID int64, slugAndFlatID string, command string) {
 		return
 	}
 
+	// save orig slice for calculating stats
+	allFlats := allFlatsMessageData.Flats
+
 	// select only matching flats
 	allFlatsMessageData.Flats = util.FilterSliceInPlace(allFlatsMessageData.Flats, func(i int) bool {
 		return allFlatsMessageData.Flats[i].ID == flatID
@@ -144,9 +147,17 @@ func sendInfo(chatID int64, slugAndFlatID string, command string) {
 
 	if len(allFlatsMessageData.Flats) == 0 {
 		msg = fmt.Sprintf("No flats found with ID %v in complex %v", flatID, slug)
-	} else {
-		msg = allFlatsMessageData.StringInfo()
+		SendMessageWithPinAsync(chatID, msg, false)
+		return
 	}
+
+	stats := flatstorage.FlatStats{}
+	for _, flat := range allFlats[len(allFlatsMessageData.Flats):] {
+		if flat.IsSimilar(allFlatsMessageData.Flats[0]) {
+			stats.SimilarFlats = append(stats.SimilarFlats, flat)
+		}
+	}
+	msg = allFlatsMessageData.StringInfo(stats)
 
 	SendMessageWithPinAsync(chatID, msg, false)
 }
