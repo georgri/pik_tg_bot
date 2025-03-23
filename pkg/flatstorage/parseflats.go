@@ -54,8 +54,9 @@ type Flat struct {
 }
 
 type PriceEntry struct {
-	Date  string `json:"date,omitempty"`
-	Price int64  `json:"price,omitempty"`
+	Date   string `json:"date,omitempty"`
+	Price  int64  `json:"price,omitempty"`
+	Status string `json:"status,omitempty"`
 }
 
 type MessageData struct {

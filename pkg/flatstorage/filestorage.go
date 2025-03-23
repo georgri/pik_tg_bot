@@ -136,7 +136,8 @@ func FilterWithFlatStorageHelper(oldMsg, newMsg *MessageData) []string {
 
 type oldFlatInfo struct {
 	Created      string
-	OldPrice     int64
+	Price        int64
+	Status       string
 	PriceHistory []PriceEntry
 }
 
@@ -165,7 +166,8 @@ func MergeNewFlatsIntoOld(oldMsg, newMsg *MessageData) *MessageData {
 		}
 		oldFlatsMap[oldMsg.Flats[i].ID] = oldFlatInfo{
 			Created:      oldMsg.Flats[i].Created,
-			OldPrice:     oldMsg.Flats[i].Price,
+			Price:        oldMsg.Flats[i].Price,
+			Status:       oldMsg.Flats[i].Status,
 			PriceHistory: oldMsg.Flats[i].PriceHistory,
 		}
 	}
@@ -181,20 +183,22 @@ func MergeNewFlatsIntoOld(oldMsg, newMsg *MessageData) *MessageData {
 		newMsg.Flats[i].Created = now
 		if oldInfo, ok := oldFlatsMap[newMsg.Flats[i].ID]; ok {
 			newMsg.Flats[i].Created = oldInfo.Created
-			newMsg.Flats[i].OldPrice = oldInfo.OldPrice
+			newMsg.Flats[i].OldPrice = oldInfo.Price
 			newMsg.Flats[i].PriceHistory = oldInfo.PriceHistory
 
-			if newMsg.Flats[i].Price != newMsg.Flats[i].OldPrice || len(newMsg.Flats[i].PriceHistory) == 0 {
+			if len(newMsg.Flats[i].PriceHistory) == 0 || newMsg.Flats[i].Price != oldInfo.Price || newMsg.Flats[i].Status != oldInfo.Status {
 				newMsg.Flats[i].PriceHistory = append(newMsg.Flats[i].PriceHistory, PriceEntry{
-					Date:  now,
-					Price: newMsg.Flats[i].Price,
+					Date:   now,
+					Price:  newMsg.Flats[i].Price,
+					Status: newMsg.Flats[i].Status,
 				})
 			}
 		} else {
 			// for new flats always add the current price
 			newMsg.Flats[i].PriceHistory = append(newMsg.Flats[i].PriceHistory, PriceEntry{
-				Date:  now,
-				Price: newMsg.Flats[i].Price,
+				Date:   now,
+				Price:  newMsg.Flats[i].Price,
+				Status: newMsg.Flats[i].Status,
 			})
 		}
 		newMsg.Flats[i].Updated = now
