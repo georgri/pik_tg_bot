@@ -18,6 +18,8 @@ const (
 	downArrow = "🔻"
 
 	SimilarAreaThresholdPercent = 2
+
+	PercentageChangeEpsilon = 0.05
 )
 
 // url example: https://flat.pik-service.ru/api/v1/filter/flat-by-block/1240?type=1,2&location=2,3&flatLimit=80&onlyFlats=1
@@ -403,10 +405,12 @@ func (f *Flat) formatPriceChange() string {
 	}
 
 	percentage := (float64(f.Price)/float64(oldPrice) - 1) * 100
-	if percentage >= 0 {
+	if percentage > PercentageChangeEpsilon {
 		return fmt.Sprintf(upArrow+"%.1f%%", percentage)
+	} else if percentage < -PercentageChangeEpsilon {
+		return fmt.Sprintf(downArrow+"%.1f%%", -percentage)
 	}
-	return fmt.Sprintf(downArrow+"%.1f%%", -percentage)
+	return ""
 }
 
 // ex 2025-06-15 => 25Q3
