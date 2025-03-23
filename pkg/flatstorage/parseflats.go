@@ -52,8 +52,10 @@ type Flat struct {
 
 	AveragePrice int64        `json:"averagePrice"`
 	OldPrice     int64        `json:"oldPrice"`
-	PriceHistory []PriceEntry `json:"priceHistory,omitempty"`
+	PriceHistory PriceHistory `json:"priceHistory,omitempty"`
 }
+
+type PriceHistory []PriceEntry
 
 type PriceEntry struct {
 	Date   string `json:"date,omitempty"`
@@ -151,6 +153,27 @@ func (f *Flat) IsSimilar(another Flat) bool {
 	return f.Area <= another.Area/100.0*(100.0+SimilarAreaThresholdPercent) && f.Area >= another.Area/100.0*(100.0-SimilarAreaThresholdPercent)
 }
 
+func (f *Flat) GetPriceHistory() PriceHistory {
+	if f == nil {
+		return nil
+	}
+
+	if len(f.PriceHistory) == 0 {
+		f.PriceHistory = PriceHistory{PriceEntry{
+			Date:   f.Updated,
+			Price:  f.Price,
+			Status: f.Status,
+		}}
+	}
+
+	size := len(f.PriceHistory)
+	if f.PriceHistory[size-1].Status == "" {
+		f.PriceHistory[size-1].Status = f.Status
+	}
+
+	return f.PriceHistory
+}
+
 // String print in human readable telegram friendly format
 // example input:
 // {831859 32.6 19 {Нагатинская #ACADAF} 12756380 1 free
@@ -199,7 +222,7 @@ func (md *MessageData) StringInfo(stats FlatStats) string {
 	for _, flat := range md.Flats {
 		flats = append(flats, flat.String())
 		// TODO: format dates and prices nicely
-		flats = append(flats, fmt.Sprintf("%v", flat.PriceHistory))
+		flats = append(flats, fmt.Sprintf("%v", flat.GetPriceHistory()))
 	}
 
 	if len(stats.SimilarFlats) > 0 {
@@ -207,7 +230,7 @@ func (md *MessageData) StringInfo(stats FlatStats) string {
 		for _, flat := range stats.SimilarFlats {
 			flats = append(flats, flat.String())
 			// TODO: format dates and prices nicely
-			flats = append(flats, fmt.Sprintf("%v", flat.PriceHistory))
+			flats = append(flats, fmt.Sprintf("%v", flat.GetPriceHistory()))
 		}
 	}
 
@@ -362,13 +385,14 @@ func (f *Flat) formatAvgPrice() string {
 }
 
 func (f *Flat) formatPriceChange() string {
-	if len(f.PriceHistory) == 0 {
+	priceHistory := f.GetPriceHistory()
+	if len(priceHistory) == 0 {
 		return ""
 	}
 
 	weekAgo := time.Now().Add(-PriceComparisonInterval).Format(time.RFC3339)
 	var oldPrice int64
-	for _, pricePoint := range f.PriceHistory {
+	for _, pricePoint := range priceHistory {
 		if pricePoint.Date < weekAgo {
 			oldPrice = pricePoint.Price
 		}

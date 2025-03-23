@@ -169,7 +169,7 @@ func MergeNewFlatsIntoOld(oldMsg, newMsg *MessageData) *MessageData {
 			Created:      oldMsg.Flats[i].Created,
 			Price:        oldMsg.Flats[i].Price,
 			Status:       oldMsg.Flats[i].Status,
-			PriceHistory: oldMsg.Flats[i].PriceHistory,
+			PriceHistory: oldMsg.Flats[i].GetPriceHistory(),
 		}
 	}
 
