@@ -168,6 +168,25 @@ func (md *MessageData) StringWithOptions(sortByAvg bool, withInfo bool) string {
 	return res
 }
 
+func (md *MessageData) StringInfo() string {
+	if len(md.Flats) == 0 {
+		return ""
+	}
+
+	res := fmt.Sprintf("info about flat #%v in compex %v:", md.Flats[0].ID, md.Flats[0].BlockSlug)
+
+	flats := make([]string, 0, len(md.Flats))
+	for _, flat := range md.Flats {
+		flats = append(flats, flat.String())
+		// TODO: format dates and prices nicely
+		flats = append(flats, fmt.Sprintf("%v", flat.PriceHistory))
+	}
+
+	res += "\n" + strings.Join(flats, "\n") // try <br>
+
+	return res
+}
+
 // MakeHeader example:
 // // {number of Flats} новых объектов в ЖК "Второй Нагатинский" (м.Нагатинская (color #ACADAF)):
 func (md *MessageData) MakeHeader() string {

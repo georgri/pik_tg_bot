@@ -200,6 +200,8 @@ func processUpdate(update *UpdateStruct) {
 			sendDump(update.Message.Chat.Id, args, DumpAvgCommand)
 		case DumpInfoCommand:
 			sendDump(update.Message.Chat.Id, args, DumpInfoCommand)
+		case InfoCommand:
+			sendInfo(update.Message.Chat.Id, args, InfoCommand)
 		case SubscribeCommand:
 			subscribeChat(update.Message.Chat.Id, args)
 		case UnsubscribeCommand:

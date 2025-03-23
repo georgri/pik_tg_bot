@@ -18,7 +18,7 @@ const (
 	storageFormat = "json"
 
 	DefaultPriceDropPercentThreshold        = 15
-	DefaultExtremePriceDropPercentThreshold = 20
+	DefaultExtremePriceDropPercentThreshold = 30
 )
 
 var FileMutex sync.RWMutex

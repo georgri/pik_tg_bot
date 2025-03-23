@@ -5,6 +5,7 @@ import (
 	"github.com/georgri/pik_tg_bot/pkg/flatstorage"
 	"github.com/georgri/pik_tg_bot/pkg/util"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -15,6 +16,7 @@ const (
 	DumpInfoCommand    = "dumpinfo"
 	SubscribeCommand   = "sub"
 	UnsubscribeCommand = "unsub"
+	InfoCommand        = "info"
 )
 
 func sendHello(chatID int64, username string) {
@@ -103,6 +105,50 @@ func sendDump(chatID int64, slug string, command string) {
 	}
 
 	SendMessageWithPinAsync(chatID, msg, true)
+}
+
+func sendInfo(chatID int64, slugAndFlatID string, command string) {
+
+	split := strings.Split(slugAndFlatID, "_")
+	flatIDStr := split[len(split)-1]
+	slug, _ := strings.CutSuffix(slugAndFlatID, "_"+flatIDStr)
+
+	flatID, err := strconv.ParseInt(flatIDStr, 10, 64)
+	if err != nil {
+		log.Printf("failed to parse flatID %v from %v: %v", flatIDStr, slugAndFlatID, err)
+	}
+
+	slug, err = validateSlug(chatID, slug, command)
+	if err != nil {
+		log.Printf("failed to send info to %v about %v: %v", chatID, slugAndFlatID, err)
+		return
+	}
+
+	var msg string
+
+	// send info about flat with given ID
+	fileName := flatstorage.GetStorageFileNameByBlockSlug(slug)
+	if !flatstorage.FileExists(fileName) {
+		log.Printf("failed to get filename for slug %v: %v", slug, err)
+	}
+	allFlatsMessageData, err := flatstorage.ReadFlatStorage(fileName)
+	if err != nil {
+		log.Printf("failed to read file with flats %v: %v", fileName, err)
+		return
+	}
+
+	// select only matching flats
+	allFlatsMessageData.Flats = util.FilterSliceInPlace(allFlatsMessageData.Flats, func(i int) bool {
+		return allFlatsMessageData.Flats[i].ID == flatID
+	})
+
+	if len(allFlatsMessageData.Flats) == 0 {
+		msg = fmt.Sprintf("No flats found with ID %v in complex %v", flatID, slug)
+	} else {
+		msg = allFlatsMessageData.StringInfo()
+	}
+
+	SendMessageWithPinAsync(chatID, msg, false)
 }
 
 func AddNewSubscriber(chatID int64, slug string) error {
