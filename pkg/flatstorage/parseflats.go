@@ -24,6 +24,8 @@ const (
 
 	windowPeriod      = 2 * 7 * 24 * time.Hour
 	smallWindowPeriod = 24 * time.Hour
+
+	collapsePricesPeriod = 1 * time.Hour
 )
 
 // url example: https://flat.pik-service.ru/api/v1/filter/flat-by-block/1240?type=1,2&location=2,3&flatLimit=80&onlyFlats=1
@@ -177,7 +179,52 @@ func (f *Flat) GetPriceHistory() PriceHistory {
 		f.PriceHistory[size-1].Status = f.Status
 	}
 
+	f.PriceHistory = prunePriceHistory(f.PriceHistory)
+
 	return f.PriceHistory
+}
+
+func prunePriceHistory(history PriceHistory) PriceHistory {
+	if len(history) == 0 {
+		return history
+	}
+
+	result := history
+	i := 0
+	for i < len(history) {
+		curr := history[i]
+		result = append(result, curr)
+
+		// Look for the pattern A -> ... -> A within 1 hour
+		var lastAIndex = -1
+		startTime, err := time.Parse(time.RFC3339, curr.Date)
+		if err != nil {
+			i++
+			continue
+		}
+
+		for j := i + 1; j < len(history); j++ {
+			nextTime, err := time.Parse(time.RFC3339, history[j].Date)
+			if err != nil {
+				break
+			}
+			if nextTime.Sub(startTime) > collapsePricesPeriod {
+				break
+			}
+			if history[j].Price == curr.Price {
+				lastAIndex = j
+			}
+		}
+
+		if lastAIndex != -1 {
+			// Skip all entries between i+1 and lastAIndex inclusive
+			i = lastAIndex + 1
+		} else {
+			i++
+		}
+	}
+
+	return result
 }
 
 // String print in human readable telegram friendly format
