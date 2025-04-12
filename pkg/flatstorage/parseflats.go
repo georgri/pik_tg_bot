@@ -189,7 +189,11 @@ func prunePriceHistory(history PriceHistory) PriceHistory {
 		return history
 	}
 
-	result := history
+	sort.Slice(history, func(i, j int) bool {
+		return history[i].Date < history[j].Date
+	})
+
+	result := history[:0]
 	i := 0
 	for i < len(history) {
 		curr := history[i]
