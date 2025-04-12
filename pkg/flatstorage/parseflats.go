@@ -260,7 +260,7 @@ func (md *MessageData) StringWithOptions(sortByAvg bool, withInfo bool) string {
 
 	flats := make([]string, 0, len(md.Flats))
 	for _, flat := range md.Flats {
-		flats = append(flats, flat.StringWithOptions(withInfo))
+		flats = append(flats, flat.StringWithOptions())
 	}
 
 	res += "\n" + strings.Join(flats, "\n") // try <br>
@@ -461,10 +461,10 @@ func (f *Flat) RecentlyUpdated(now time.Time) bool {
 // String example:
 // Корпус 1.3 #831859[url link to flat]: 32.6m, 1r, f19, 12_756_380rub,
 func (f *Flat) String() string {
-	return f.StringWithOptions(false)
+	return f.StringWithOptions()
 }
 
-func (f *Flat) StringWithOptions(withInfo bool) string {
+func (f *Flat) StringWithOptions() string {
 	if f == nil {
 		return ""
 	}
@@ -492,20 +492,25 @@ func (f *Flat) StringWithOptions(withInfo bool) string {
 	finishTypeString := GetFinishTypeString(f.FinishType)
 
 	res := fmt.Sprintf("%v: <a href=\"%v\">%vr, %vm2</a>, %vR, f%v%v, %v, %v", corp, flatURL, rooms, area, price, floor, reserve, settlementQuarter, finishTypeString)
+
+	var priceInfo []string
 	avgPrice := f.formatAvgPrice()
 	if avgPrice != "" {
-		res += ", " + avgPrice
+		priceInfo = append(priceInfo, avgPrice)
 	}
 
 	priceChange := f.formatPriceChange()
 	if priceChange != "" {
-		res += ", " + priceChange
+		priceInfo = append(priceInfo, priceChange)
 	}
 
-	if withInfo {
-		infoCommand := fmt.Sprintf("info_%v_%v", f.BlockSlug, f.ID)
-		res += ", " + fmt.Sprintf(`<a href="t.me/%v?start=%v">info</a>`, util.GetBotUsername(), infoCommand)
+	priceInfoStr := strings.Join(priceInfo, ", ")
+	if priceInfoStr == "" {
+		priceInfoStr = "info"
 	}
+
+	infoCommand := fmt.Sprintf("info_%v_%v", f.BlockSlug, f.ID)
+	res += ", " + fmt.Sprintf(`<a href="t.me/%v?start=%v">%v</a>`, util.GetBotUsername(), infoCommand, priceInfoStr)
 
 	return res
 }
