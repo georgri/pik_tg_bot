@@ -159,7 +159,7 @@ func sendInfo(chatID int64, slugAndFlatID string, command string) {
 	}
 	msg, img := allFlatsMessageData.GetInfoToSend(stats)
 
-	SendMessageWithImgAsync(chatID, msg, img, "min and max prices for similar flats", false)
+	SendMessageWithImgAsync(chatID, msg, img, "min and max prices (with 2 week window) for similar flats in reserved status", false)
 }
 
 func AddNewSubscriber(chatID int64, slug string) error {

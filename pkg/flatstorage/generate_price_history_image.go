@@ -57,7 +57,8 @@ func generatePriceChart(minHistory, maxHistory PriceHistory) ([]byte, error) {
 			ValueFormatter: chart.TimeDateValueFormatter,
 		},
 		YAxis: chart.YAxis{
-			Name: "Price (₽)",
+			Name:           "Price (₽)",
+			ValueFormatter: chart.IntValueFormatter,
 		},
 		Series: []chart.Series{minSeries, maxSeries},
 	}

@@ -279,27 +279,33 @@ func (md *MessageData) GetInfoToSend(stats FlatStats) (string, []byte) {
 	for _, flat := range md.Flats {
 		flats = append(flats, flat.String())
 		// TODO: format dates and prices nicely
-		flats = append(flats, fmt.Sprintf("%v", flat.GetPriceHistory()))
+		flats = append(flats, fmt.Sprintf("Price history:"))
+		for _, priceEntry := range flat.GetPriceHistory() {
+			flats = append(flats, fmt.Sprintf("%v", priceEntry))
+		}
 	}
 
 	minSeries, maxSeries := CalcPriceMinMaxRangeSeries(stats.SimilarFlats)
 
-	if len(minSeries) > 0 {
-		flats = append(flats, fmt.Sprintf("minimum prices for similar reserved flats:"))
-		for _, pricePoint := range minSeries {
-			flats = append(flats, fmt.Sprintf("%v", pricePoint))
-		}
-	} else {
+	if len(minSeries) == 0 {
 		flats = append(flats, fmt.Sprintf("not enough data to calc min/max series :("))
-	}
-	if len(maxSeries) > 0 {
-		flats = append(flats, fmt.Sprintf("maximum prices for similar reserved flats:"))
-		for _, pricePoint := range maxSeries {
-			flats = append(flats, fmt.Sprintf("%v", pricePoint))
-		}
 	}
 
 	// TODO: enable later for premium users
+	//if len(minSeries) > 0 {
+	//	flats = append(flats, fmt.Sprintf("minimum prices for similar reserved flats:"))
+	//	for _, pricePoint := range minSeries {
+	//		flats = append(flats, fmt.Sprintf("%v", pricePoint))
+	//	}
+	//}
+	//
+	//if len(maxSeries) > 0 {
+	//	flats = append(flats, fmt.Sprintf("maximum prices for similar reserved flats:"))
+	//	for _, pricePoint := range maxSeries {
+	//		flats = append(flats, fmt.Sprintf("%v", pricePoint))
+	//	}
+	//}
+	//
 	//if len(stats.SimilarFlats) > 0 {
 	//	flats = append(flats, fmt.Sprintf("info about similar flats in complex %v:", md.Flats[0].BlockSlug))
 	//	for _, flat := range stats.SimilarFlats {
