@@ -1,10 +1,12 @@
 package telegrambot
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/georgri/pik_tg_bot/pkg/util"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strings"
@@ -21,9 +23,11 @@ const (
 // i.e. https://api.telegram.org/bot{token}/sendMessage?chat_id={chat_id}&text={text}
 
 type telegramMessage struct {
-	chatID  int64
-	text    string
-	mustPin bool
+	chatID     int64
+	text       string
+	img        []byte
+	imgCaption string
+	mustPin    bool
 }
 
 var messageChannel chan telegramMessage
@@ -33,7 +37,7 @@ func init() {
 	go func() {
 		// TODO: graceful degradation?
 		for msg := range messageChannel {
-			err := SendMessageWithPin(msg.chatID, msg.text, msg.mustPin)
+			err := SendMessageWithPin(msg.chatID, msg.text, msg.img, msg.imgCaption, msg.mustPin)
 			if err != nil {
 				log.Printf("failed to send message to chatID %v: %v", msg.chatID, err)
 			}
@@ -52,26 +56,39 @@ func SendMessage(chatID int64, text string) error {
 }
 
 func SendMessageWithPinAsync(chatID int64, text string, mustPin bool) {
+	SendMessageWithImgAsync(chatID, text, nil, "", mustPin)
+}
+
+func SendMessageWithImgAsync(chatID int64, text string, img []byte, imgCaption string, mustPin bool) {
 	messageChannel <- telegramMessage{
-		chatID:  chatID,
-		text:    text,
-		mustPin: mustPin,
+		chatID:     chatID,
+		text:       text,
+		mustPin:    mustPin,
+		img:        img,
+		imgCaption: imgCaption,
 	}
 }
 
-func SendMessageWithPin(chatID int64, text string, mustPin bool) error {
+func SendMessageWithPin(chatID int64, text string, img []byte, imgCaption string, mustPin bool) error {
 	token := util.GetBotToken()
 
 	chunks := SplitTextIntoSendableChunks(text)
 
 	var messageIDToDefer int64
 	for i, msg := range chunks {
-		messageID, err := SendMessageWithToken(token, chatID, msg)
+		messageID, err := sendMessageWithToken(token, chatID, msg)
 		if err != nil {
 			return err
 		}
 		if len(chunks) > 1 && i == 0 && mustPin {
 			messageIDToDefer = messageID
+		}
+	}
+
+	if len(img) > 0 {
+		err := sendImageWithToken(token, chatID, imgCaption, img)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -139,7 +156,7 @@ type SendResponse struct {
 	} `json:"result"`
 }
 
-func SendMessageWithToken(token string, chatID int64, text string) (int64, error) {
+func sendMessageWithToken(token string, chatID int64, text string) (int64, error) {
 
 	sendMessageUrl := fmt.Sprintf("https://api.telegram.org/bot%v/sendMessage", token)
 
@@ -180,7 +197,57 @@ func SendMessageWithToken(token string, chatID int64, text string) (int64, error
 	return sendResponse.Result.MessageId, nil
 }
 
+func sendImageWithToken(botToken string, chatID int64, caption string, imageData []byte) error {
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendPhoto", botToken)
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+
+	// Add fields
+	_ = writer.WriteField("chat_id", fmt.Sprintf("%v", chatID))
+	_ = writer.WriteField("caption", caption)
+
+	// Add the image as a form file
+	part, err := writer.CreateFormFile("photo", "price_chart.png")
+	if err != nil {
+		return err
+	}
+	_, err = part.Write(imageData)
+	if err != nil {
+		return err
+	}
+
+	err = writer.Close()
+	if err != nil {
+		return err
+	}
+
+	// Create HTTP request
+	req, err := http.NewRequest("POST", url, &body)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("telegram API error while sending image: %s", resp.Status)
+	}
+
+	return nil
+}
+
 func SplitTextIntoSendableChunks(text string) []string {
+	if len(text) == 0 {
+		return nil
+	}
+
 	lines := strings.Split(text, "\n")
 
 	res := make([]string, 0, 5)

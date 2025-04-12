@@ -66,7 +66,7 @@ type Flat struct {
 type PriceHistory []PriceEntry
 
 type PriceEntry struct {
-	Date   string `json:"date,omitempty"`
+	Date   string `json:"date,omitempty"` // time.RFC3339
 	Price  int64  `json:"price,omitempty"`
 	Status string `json:"status,omitempty"`
 }
@@ -268,9 +268,9 @@ func (md *MessageData) StringWithOptions(sortByAvg bool, withInfo bool) string {
 	return res
 }
 
-func (md *MessageData) StringInfo(stats FlatStats) string {
+func (md *MessageData) GetInfoToSend(stats FlatStats) (string, []byte) {
 	if len(md.Flats) == 0 {
-		return ""
+		return "", nil
 	}
 
 	res := fmt.Sprintf("info about flat #%v in compex %v:", md.Flats[0].ID, md.Flats[0].BlockSlug)
@@ -311,7 +311,9 @@ func (md *MessageData) StringInfo(stats FlatStats) string {
 
 	res += "\n" + strings.Join(flats, "\n") // try <br>
 
-	return res
+	img, _ := generatePriceChart(minSeries, maxSeries)
+
+	return res, img
 }
 
 func CalcPriceMinMaxRangeSeries(flats []Flat) (PriceHistory, PriceHistory) {

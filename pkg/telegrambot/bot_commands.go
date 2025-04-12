@@ -157,9 +157,9 @@ func sendInfo(chatID int64, slugAndFlatID string, command string) {
 			stats.SimilarFlats = append(stats.SimilarFlats, flat)
 		}
 	}
-	msg = allFlatsMessageData.StringInfo(stats)
+	msg, img := allFlatsMessageData.GetInfoToSend(stats)
 
-	SendMessageWithPinAsync(chatID, msg, false)
+	SendMessageWithImgAsync(chatID, msg, img, "min and max prices for similar flats", false)
 }
 
 func AddNewSubscriber(chatID int64, slug string) error {
