@@ -171,12 +171,12 @@ func (f *Flat) IsSimilar(another Flat) bool {
 
 // IsAreaSimilarForMinPrice checks that another area is eligible to be in min price window (-2%, +20%)
 func IsAreaSimilarForMinPrice(origArea, anotherArea float64) bool {
-	return origArea <= anotherArea/100.0*(100.0+SimilarAreaThresholdPercentTo) && origArea >= anotherArea/100.0*(100.0-SimilarAreaThresholdPercentFrom)
+	return origArea <= anotherArea/100.0*(100.0+SimilarAreaThresholdPercentFrom) && origArea >= anotherArea/100.0*(100.0-SimilarAreaThresholdPercentTo)
 }
 
 // IsAreaSimilarForMaxPrice checks that another area is eligible to be in max price window (-20%, +2%)
 func IsAreaSimilarForMaxPrice(origArea, anotherArea float64) bool {
-	return origArea <= anotherArea/100.0*(100.0+SimilarAreaThresholdPercentFrom) && origArea >= anotherArea/100.0*(100.0-SimilarAreaThresholdPercentTo)
+	return origArea <= anotherArea/100.0*(100.0+SimilarAreaThresholdPercentTo) && origArea >= anotherArea/100.0*(100.0-SimilarAreaThresholdPercentFrom)
 }
 
 func (f *Flat) GetPriceHistory() PriceHistory {
