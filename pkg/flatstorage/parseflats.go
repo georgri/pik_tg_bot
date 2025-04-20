@@ -18,8 +18,8 @@ const (
 	upArrow   = "⬆"
 	downArrow = "🔻"
 
-	SimilarAreaThresholdPercentFrom = 2
-	SimilarAreaThresholdPercentTo   = 20
+	SimilarAreaThresholdPercentFrom = 5
+	SimilarAreaThresholdPercentTo   = 5
 
 	PercentageChangeEpsilon = 0.05
 
