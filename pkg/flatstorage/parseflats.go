@@ -166,12 +166,12 @@ func (f *Flat) IsSimilar(another Flat) bool {
 	}
 
 	// area is similar (+-2%)
-	return f.Area <= another.Area/100.0*(100.0+SimilarAreaThresholdPercentTo) && f.Area >= another.Area/100.0*(100.0-SimilarAreaThresholdPercentTo)
+	return f.Area <= another.Area/100.0*(100.0+SimilarAreaThresholdPercentTo) && f.Area >= another.Area/100.0*(100.0-SimilarAreaThresholdPercentFrom)
 }
 
 // IsAreaSimilarForMinPrice checks that another area is eligible to be in min price window (-2%, +20%)
 func IsAreaSimilarForMinPrice(origArea, anotherArea float64) bool {
-	return origArea <= anotherArea/100.0*(100.0+SimilarAreaThresholdPercentFrom) && origArea >= anotherArea/100.0*(100.0-SimilarAreaThresholdPercentTo)
+	return origArea <= anotherArea/100.0*(100.0+SimilarAreaThresholdPercentFrom) && origArea >= anotherArea/100.0*(100.0-SimilarAreaThresholdPercentFrom)
 }
 
 // IsAreaSimilarForMaxPrice checks that another area is eligible to be in max price window (-20%, +2%)
