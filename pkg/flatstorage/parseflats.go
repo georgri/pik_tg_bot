@@ -76,7 +76,8 @@ type PriceHistoryWithOptions []PriceEntryOption
 
 type PriceEntryOption struct {
 	PriceEntry
-	Area float64
+	Area   float64
+	Status string
 }
 
 type MessageData struct {
@@ -345,12 +346,10 @@ func CalcPriceMinMaxRangeSeries(flats []Flat, origFlat Flat) (PriceHistoryWithOp
 	history := make(PriceHistoryWithOptions, 0, len(flats))
 	for i := range flats {
 		for _, pricePoint := range flats[i].GetPriceHistory() {
-			if pricePoint.Status != "reserve" {
-				continue
-			}
 			history = append(history, PriceEntryOption{
 				PriceEntry: pricePoint,
 				Area:       flats[i].Area,
+				Status:     flats[i].Status,
 			})
 		}
 	}
@@ -380,7 +379,7 @@ func CalcPriceMinMaxRangeSeries(flats []Flat, origFlat Flat) (PriceHistoryWithOp
 				minDeque = minDeque[:len(minDeque)-1]
 			}
 		}
-		if IsAreaSimilarForMaxPrice(origFlat.Area, pricePoint.Area) {
+		if IsAreaSimilarForMaxPrice(origFlat.Area, pricePoint.Area) && pricePoint.Status == "reserve" {
 			for len(maxDeque) > 0 && maxDeque[len(maxDeque)-1].Price <= pricePoint.Price {
 				maxDeque = maxDeque[:len(maxDeque)-1]
 			}
@@ -409,7 +408,7 @@ func CalcPriceMinMaxRangeSeries(flats []Flat, origFlat Flat) (PriceHistoryWithOp
 				}
 			}
 		}
-		if IsAreaSimilarForMaxPrice(origFlat.Area, pricePoint.Area) {
+		if IsAreaSimilarForMaxPrice(origFlat.Area, pricePoint.Area) && pricePoint.Status == "reserve" {
 			maxDeque = append(maxDeque, pricePoint)
 
 			if len(maxSeries) == 0 || maxSeries[len(maxSeries)-1] != maxDeque[0] {
