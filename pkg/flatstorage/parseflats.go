@@ -375,22 +375,22 @@ func CalcPriceMinMaxRangeSeries(flats []Flat, origFlat Flat) (PriceHistoryWithOp
 
 		// update minDeque and maxDeque: pop from both while price is lower/higher
 		if IsAreaSimilarForMinPrice(origFlat.Area, pricePoint.Area) {
-			for len(minDeque) > 0 && minDeque[len(minDeque)-1].Price >= pricePoint.Price {
+			for len(minDeque) > 0 && minDeque[len(minDeque)-1].Price > pricePoint.Price {
 				minDeque = minDeque[:len(minDeque)-1]
 			}
 		}
 		if IsAreaSimilarForMaxPrice(origFlat.Area, pricePoint.Area) && pricePoint.Status == "reserve" {
-			for len(maxDeque) > 0 && maxDeque[len(maxDeque)-1].Price <= pricePoint.Price {
+			for len(maxDeque) > 0 && maxDeque[len(maxDeque)-1].Price < pricePoint.Price {
 				maxDeque = maxDeque[:len(maxDeque)-1]
 			}
 		}
 
 		// shift left window pointer, get rid of first elements in deques if needed
 		for leftIndex < i && history[leftIndex].Date < leftTimeStr {
-			for len(minDeque) > 0 && minDeque[0] == history[leftIndex] {
+			if len(minDeque) > 0 && minDeque[0] == history[leftIndex] {
 				minDeque = minDeque[1:]
 			}
-			for len(maxDeque) > 0 && maxDeque[0] == history[leftIndex] {
+			if len(maxDeque) > 0 && maxDeque[0] == history[leftIndex] {
 				maxDeque = maxDeque[1:]
 			}
 			leftIndex++
