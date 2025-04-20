@@ -11,7 +11,7 @@ import (
 	"github.com/wcharczuk/go-chart/v2"
 )
 
-func generatePriceChart(minHistory, maxHistory PriceHistory) ([]byte, error) {
+func generatePriceChart(minHistory, maxHistory PriceHistoryWithOptions) ([]byte, error) {
 	minSeries := chart.TimeSeries{
 		Name:    "Minimum Prices",
 		XValues: make([]time.Time, 0, len(minHistory)),

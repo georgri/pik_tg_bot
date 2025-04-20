@@ -18,7 +18,8 @@ const (
 	upArrow   = "⬆"
 	downArrow = "🔻"
 
-	SimilarAreaThresholdPercent = 2
+	SimilarAreaThresholdPercentFrom = 2
+	SimilarAreaThresholdPercentTo   = 20
 
 	PercentageChangeEpsilon = 0.05
 
@@ -69,6 +70,13 @@ type PriceEntry struct {
 	Date   string `json:"date,omitempty"` // time.RFC3339
 	Price  int64  `json:"price,omitempty"`
 	Status string `json:"status,omitempty"`
+}
+
+type PriceHistoryWithOptions []PriceEntryOption
+
+type PriceEntryOption struct {
+	PriceEntry
+	Area float64
 }
 
 type MessageData struct {
@@ -158,7 +166,17 @@ func (f *Flat) IsSimilar(another Flat) bool {
 	}
 
 	// area is similar (+-2%)
-	return f.Area <= another.Area/100.0*(100.0+SimilarAreaThresholdPercent) && f.Area >= another.Area/100.0*(100.0-SimilarAreaThresholdPercent)
+	return f.Area <= another.Area/100.0*(100.0+SimilarAreaThresholdPercentTo) && f.Area >= another.Area/100.0*(100.0-SimilarAreaThresholdPercentTo)
+}
+
+// IsAreaSimilarForMinPrice checks that another area is eligible to be in min price window (-2%, +20%)
+func IsAreaSimilarForMinPrice(origArea, anotherArea float64) bool {
+	return origArea <= anotherArea/100.0*(100.0+SimilarAreaThresholdPercentTo) && origArea >= anotherArea/100.0*(100.0-SimilarAreaThresholdPercentFrom)
+}
+
+// IsAreaSimilarForMaxPrice checks that another area is eligible to be in max price window (-20%, +2%)
+func IsAreaSimilarForMaxPrice(origArea, anotherArea float64) bool {
+	return origArea <= anotherArea/100.0*(100.0+SimilarAreaThresholdPercentFrom) && origArea >= anotherArea/100.0*(100.0-SimilarAreaThresholdPercentTo)
 }
 
 func (f *Flat) GetPriceHistory() PriceHistory {
@@ -285,7 +303,7 @@ func (md *MessageData) GetInfoToSend(stats FlatStats) (string, []byte) {
 		}
 	}
 
-	minSeries, maxSeries := CalcPriceMinMaxRangeSeries(stats.SimilarFlats)
+	minSeries, maxSeries := CalcPriceMinMaxRangeSeries(stats.SimilarFlats, md.Flats[0])
 
 	if len(minSeries) == 0 {
 		flats = append(flats, fmt.Sprintf("not enough data to calc min/max series :("))
@@ -322,15 +340,18 @@ func (md *MessageData) GetInfoToSend(stats FlatStats) (string, []byte) {
 	return res, img
 }
 
-func CalcPriceMinMaxRangeSeries(flats []Flat) (PriceHistory, PriceHistory) {
+func CalcPriceMinMaxRangeSeries(flats []Flat, origFlat Flat) (PriceHistoryWithOptions, PriceHistoryWithOptions) {
 	// make single slice with all the data
-	history := make(PriceHistory, 0, len(flats))
+	history := make(PriceHistoryWithOptions, 0, len(flats))
 	for i := range flats {
 		for _, pricePoint := range flats[i].GetPriceHistory() {
 			if pricePoint.Status != "reserve" {
 				continue
 			}
-			history = append(history, pricePoint)
+			history = append(history, PriceEntryOption{
+				PriceEntry: pricePoint,
+				Area:       flats[i].Area,
+			})
 		}
 	}
 
@@ -339,8 +360,8 @@ func CalcPriceMinMaxRangeSeries(flats []Flat) (PriceHistory, PriceHistory) {
 		return history[i].Date < history[j].Date
 	})
 
-	var minSeries, maxSeries PriceHistory
-	var minDeque, maxDeque PriceHistory
+	var minSeries, maxSeries PriceHistoryWithOptions
+	var minDeque, maxDeque PriceHistoryWithOptions
 	leftIndex := 0
 
 	// make two weeks window
@@ -354,11 +375,15 @@ func CalcPriceMinMaxRangeSeries(flats []Flat) (PriceHistory, PriceHistory) {
 		smallWindowTimeStr := pointDate.Add(-smallWindowPeriod).Format(time.RFC3339)
 
 		// update minDeque and maxDeque: pop from both while price is lower/higher
-		for len(minDeque) > 0 && minDeque[len(minDeque)-1].Price >= pricePoint.Price {
-			minDeque = minDeque[:len(minDeque)-1]
+		if IsAreaSimilarForMinPrice(origFlat.Area, pricePoint.Area) {
+			for len(minDeque) > 0 && minDeque[len(minDeque)-1].Price >= pricePoint.Price {
+				minDeque = minDeque[:len(minDeque)-1]
+			}
 		}
-		for len(maxDeque) > 0 && maxDeque[len(maxDeque)-1].Price <= pricePoint.Price {
-			maxDeque = maxDeque[:len(maxDeque)-1]
+		if IsAreaSimilarForMaxPrice(origFlat.Area, pricePoint.Area) {
+			for len(maxDeque) > 0 && maxDeque[len(maxDeque)-1].Price <= pricePoint.Price {
+				maxDeque = maxDeque[:len(maxDeque)-1]
+			}
 		}
 
 		// shift left window pointer, get rid of first elements in deques if needed
@@ -373,25 +398,29 @@ func CalcPriceMinMaxRangeSeries(flats []Flat) (PriceHistory, PriceHistory) {
 		}
 
 		// push current elem into deques
-		minDeque = append(minDeque, pricePoint)
-		maxDeque = append(maxDeque, pricePoint)
-
 		// add first elems to minSeries and maxSeries
-		if len(minSeries) == 0 || minSeries[len(minSeries)-1] != minDeque[0] {
-			if len(minSeries) > 0 && minSeries[len(minSeries)-1].Date > smallWindowTimeStr {
-				minSeries[len(minSeries)-1].Price = minDeque[0].Price
-			} else {
-				minSeries = append(minSeries, minDeque[0])
+		if IsAreaSimilarForMinPrice(origFlat.Area, pricePoint.Area) {
+			minDeque = append(minDeque, pricePoint)
+			if len(minSeries) == 0 || minSeries[len(minSeries)-1] != minDeque[0] {
+				if len(minSeries) > 0 && minSeries[len(minSeries)-1].Date > smallWindowTimeStr {
+					minSeries[len(minSeries)-1].Price = minDeque[0].Price
+				} else {
+					minSeries = append(minSeries, minDeque[0])
+				}
+			}
+		}
+		if IsAreaSimilarForMaxPrice(origFlat.Area, pricePoint.Area) {
+			maxDeque = append(maxDeque, pricePoint)
+
+			if len(maxSeries) == 0 || maxSeries[len(maxSeries)-1] != maxDeque[0] {
+				if len(maxSeries) > 0 && maxSeries[len(maxSeries)-1].Date > smallWindowTimeStr {
+					maxSeries[len(maxSeries)-1].Price = maxDeque[0].Price
+				} else {
+					maxSeries = append(maxSeries, maxDeque[0])
+				}
 			}
 		}
 
-		if len(maxSeries) == 0 || maxSeries[len(maxSeries)-1] != maxDeque[0] {
-			if len(maxSeries) > 0 && maxSeries[len(maxSeries)-1].Date > smallWindowTimeStr {
-				maxSeries[len(maxSeries)-1].Price = maxDeque[0].Price
-			} else {
-				maxSeries = append(maxSeries, maxDeque[0])
-			}
-		}
 	}
 
 	return minSeries, maxSeries
