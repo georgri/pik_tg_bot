@@ -19,7 +19,6 @@ const (
 )
 
 // An example of how to send message with test bot:
-// https://api.telegram.org/bot6819149165:AAEQWnUotV_YsGS7EPaNbUKZpcvKhsmOgNg/sendMessage?chat_id=-1002057808675&text=hello_friend
 // i.e. https://api.telegram.org/bot{token}/sendMessage?chat_id={chat_id}&text={text}
 
 type telegramMessage struct {

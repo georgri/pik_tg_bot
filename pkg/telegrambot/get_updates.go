@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/georgri/pik_tg_bot/pkg/util"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -106,9 +107,9 @@ func GetUpdatesOnce() (*BotUpdatesStruct, error) {
 
 	token := util.GetBotToken()
 
-	// test api address to read updates from:
-	// https://api.telegram.org/bot6819149165:AAEQWnUotV_YsGS7EPaNbUKZpcvKhsmOgNg/getUpdates
 	getUpdatesUrl := fmt.Sprintf("https://api.telegram.org/bot%v/getUpdates", token)
+	safeURL := telegramSafeMethodURL(token, "getUpdates")
+	tokenInfo := telegramTokenInfo(token)
 
 	// also need params (see https://core.telegram.org/bots/api#getting-updates):
 	// offset = latest known update_id + 1
@@ -121,30 +122,86 @@ func GetUpdatesOnce() (*BotUpdatesStruct, error) {
 		"allowed_updates": []string{"message"},
 		"timeout":         []string{fmt.Sprintf("%v", getUpdatesPollTimeoutSeconds)},
 	}
-	// post http request
-	resp, err := http.PostForm(getUpdatesUrl, values)
+
+	// Post request. Use explicit timeout slightly above long-poll timeout.
+	client := &http.Client{Timeout: time.Duration(getUpdatesPollTimeoutSeconds+15) * time.Second}
+	resp, err := client.PostForm(getUpdatesUrl, values)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("telegram getUpdates request failed: url=%s; token=%s; err=%w", safeURL, tokenInfo, err)
+	}
+	defer resp.Body.Close()
+
+	// Read body fully; ContentLength may be -1 and Read() can return partial data.
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20)) // 1MiB cap to avoid log bombs
+	if err != nil {
+		return nil, fmt.Errorf("telegram getUpdates failed to read response body: url=%s; http=%s; token=%s; err=%w", safeURL, resp.Status, tokenInfo, err)
 	}
 
-	if resp.ContentLength < 0 {
-		return nil, fmt.Errorf("can't read body because content len < 0: %v", resp.Request.URL)
-	}
+	// If HTTP status is not OK, surface Telegram error "reason" immediately.
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		var tgErr struct {
+			Ok          bool   `json:"ok"`
+			ErrorCode   int    `json:"error_code"`
+			Description string `json:"description"`
+		}
+		_ = json.Unmarshal(body, &tgErr)
 
-	body := make([]byte, resp.ContentLength)
-	_, err = resp.Body.Read(body)
-	if err != nil {
-		return nil, fmt.Errorf("error while reading Body: %v", resp.Request.URL)
+		apiErr := &TelegramAPIError{
+			Method:              "getUpdates",
+			Reason:              telegramReason(resp.StatusCode, tgErr.ErrorCode, tgErr.Description),
+			URL:                 safeURL,
+			StatusCode:          resp.StatusCode,
+			Status:              resp.Status,
+			ContentType:         resp.Header.Get("Content-Type"),
+			TelegramErrorCode:   tgErr.ErrorCode,
+			TelegramDescription: tgErr.Description,
+			BodySnippet:         telegramBodySnippet(body, 400),
+			TokenInfo:           tokenInfo,
+		}
+		if resp.StatusCode == http.StatusUnauthorized || tgErr.ErrorCode == http.StatusUnauthorized {
+			apiErr.Hint = telegramUnauthorizedHint(token)
+		}
+		return nil, apiErr
 	}
 
 	updates := &BotUpdatesStruct{}
 	err = json.Unmarshal(body, updates)
 	if err != nil {
-		return nil, fmt.Errorf("error while unmarshalling Body: %v", string(body))
+		return nil, fmt.Errorf("telegram getUpdates failed to parse JSON: url=%s; http=%s; token=%s; body=%q; err=%w",
+			safeURL, resp.Status, tokenInfo, telegramBodySnippet(body, 400), err)
 	}
 
 	if !updates.Ok {
-		return nil, fmt.Errorf("getUpdates response is not OK: %v", string(body))
+		// Telegram error responses look like:
+		// {"ok":false,"error_code":401,"description":"Unauthorized"}
+		var tgErr struct {
+			Ok          bool   `json:"ok"`
+			ErrorCode   int    `json:"error_code"`
+			Description string `json:"description"`
+		}
+		_ = json.Unmarshal(body, &tgErr)
+
+		errCode := tgErr.ErrorCode
+		desc := tgErr.Description
+		// If unmarshal didn't populate fields, still keep the raw body snippet for diagnosis.
+
+		apiErr := &TelegramAPIError{
+			Method:               "getUpdates",
+			Reason:               telegramReason(resp.StatusCode, errCode, desc),
+			URL:                  safeURL,
+			StatusCode:           resp.StatusCode,
+			Status:               resp.Status,
+			ContentType:          resp.Header.Get("Content-Type"),
+			TelegramErrorCode:    errCode,
+			TelegramDescription:  desc,
+			BodySnippet:          telegramBodySnippet(body, 400),
+			TokenInfo:            tokenInfo,
+			Hint:                 "",
+		}
+		if resp.StatusCode == http.StatusUnauthorized || errCode == http.StatusUnauthorized {
+			apiErr.Hint = telegramUnauthorizedHint(token)
+		}
+		return nil, apiErr
 	}
 
 	return updates, nil
