@@ -182,7 +182,7 @@ func DownloadAndUpdateFile(blockSlug string) ([]string, error) {
 
 	envtype := util.GetEnvType().String()
 
-	flatMsgs, updateCallback, err := downloader.GetFlats(blockID)
+	flatMsgs, updateCallback, filterInfo, err := downloader.GetFlats(blockID)
 	if err != nil {
 		//if err == downloader.ErrorZeroFlats {
 		//	return nil, errorNoNewFlats
@@ -196,6 +196,9 @@ func DownloadAndUpdateFile(blockSlug string) ([]string, error) {
 	}
 
 	if len(flatMsgs) == 0 {
+		if filterInfo != nil {
+			return nil, fmt.Errorf("got 0 new flats after local filtering for zhk %v (blockID %v, envtype %v); local-filter: %v", blockSlug, blockID, envtype, filterInfo)
+		}
 		return nil, fmt.Errorf("got 0 new flats after local filtering for zhk %v (blockID %v, envtype %v)", blockSlug, blockID, envtype)
 	}
 

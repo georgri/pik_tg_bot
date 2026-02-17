@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	BlocksURL = "https://flat.pik-service.ru/api/v1/filter/block?type=1,2&blockLimit=1000&geoBox=1.0,179.0-1.0,179.0"
+	// Use the same backend as pik.ru/search for correct, up-to-date block info.
+	BlocksURL = "https://filter.dev-service.tech/api/v1/filter/block?type=1,2&location=2,3&flatLimit=1&blockLimit=2000"
 
 	UpdateBlocksEvery = 1 * time.Hour
 )
