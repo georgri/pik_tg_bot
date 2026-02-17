@@ -187,7 +187,7 @@ func DownloadAndUpdateFile(blockSlug string) ([]string, error) {
 		//if err == downloader.ErrorZeroFlats {
 		//	return nil, errorNoNewFlats
 		//}
-		return nil, fmt.Errorf("error getting response from pik.ru: %v", err)
+		return nil, fmt.Errorf("failed to get flats for zhk %v (blockID %v, envtype %v): %w", blockSlug, blockID, envtype, err)
 	}
 
 	err = updateCallback()
@@ -196,7 +196,7 @@ func DownloadAndUpdateFile(blockSlug string) ([]string, error) {
 	}
 
 	if len(flatMsgs) == 0 {
-		return nil, fmt.Errorf("got 0 new flats for zhk %v", blockSlug)
+		return nil, fmt.Errorf("got 0 new flats after local filtering for zhk %v (blockID %v, envtype %v)", blockSlug, blockID, envtype)
 	}
 
 	log.Printf("Got flats in %v (envtype %v): %v", blockSlug, envtype, flatMsgs)

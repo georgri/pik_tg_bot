@@ -11,6 +11,23 @@ import (
 	"time"
 )
 
+// NullString unmarshals JSON string or null into a Go string-like value.
+// This is needed because the PIK API sometimes returns null for fields like metro.name.
+type NullString string
+
+func (s *NullString) UnmarshalJSON(b []byte) error {
+	if len(b) == 0 || string(b) == "null" {
+		*s = ""
+		return nil
+	}
+	var v string
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	*s = NullString(v)
+	return nil
+}
+
 const (
 	FlatValidInterval       = 60 * time.Minute
 	PriceComparisonInterval = 7 * 24 * time.Hour
@@ -50,16 +67,16 @@ type Flat struct {
 	Status string  `json:"status"`
 	// TODO: find Url plan with areas, maybe with address https://www.pik.ru/flat/819556
 	// https://flat.pik-service.ru/api/v1/flat/819556
-	PlanURL   string `json:"planUrl"`   // https:\/\/0.db-estate.cdn.pik-service.ru\/layout\/2022\/06\/13\/1_sem2_2el36_4_2x12_6-1_t_a_90_PgbXHE4ZDppCmmc2.svg
-	BulkName  string `json:"bulkName"`  // Корпус 1.1
-	MaxFloor  int8   `json:"maxFloor"`  // 33
-	BlockName string `json:"blockName"` // Второй Нагатинский
-	BlockSlug string `json:"blockSlug"`
-	Created   string `json:"created,omitempty"` // when the flat first appeared
-	Updated   string `json:"updated,omitempty"` // when the flat was last seen (to filter out the old ones)
+	PlanURL   NullString `json:"planUrl"`   // https:\/\/0.db-estate.cdn.pik-service.ru\/layout\/2022\/06\/13\/1_sem2_2el36_4_2x12_6-1_t_a_90_PgbXHE4ZDppCmmc2.svg
+	BulkName  NullString `json:"bulkName"`  // Корпус 1.1
+	MaxFloor  int8       `json:"maxFloor"`  // 33
+	BlockName NullString `json:"blockName"` // Второй Нагатинский
+	BlockSlug NullString `json:"blockSlug"`
+	Created   string     `json:"created,omitempty"` // when the flat first appeared
+	Updated   string     `json:"updated,omitempty"` // when the flat was last seen (to filter out the old ones)
 
-	FinishType     int8   `json:"finishType"`
-	SettlementDate string `json:"settlementDate"`
+	FinishType     int8       `json:"finishType"`
+	SettlementDate NullString `json:"settlementDate"`
 
 	AveragePrice int64        `json:"averagePrice"`
 	OldPrice     int64        `json:"oldPrice"`
@@ -99,8 +116,8 @@ type PriceDropMessageData struct {
 }
 
 type Metro struct {
-	Name  string `json:"name"`
-	Color string `json:"color"`
+	Name  NullString `json:"name"`
+	Color NullString `json:"color"`
 }
 
 type Body struct {
@@ -479,7 +496,7 @@ func (md *MessageData) GetBlockSlug() string {
 	if md == nil || len(md.Flats) == 0 {
 		return ""
 	}
-	return md.Flats[0].BlockSlug
+	return string(md.Flats[0].BlockSlug)
 }
 
 type AveragePriceKey struct {
@@ -494,7 +511,7 @@ func (md *MessageData) CalcAveragePrices() {
 	aggregate := make(AveragePriceAggregator)
 	for i, flat := range md.Flats {
 		key := AveragePriceKey{
-			BlockSlug:  flat.BlockSlug,
+			BlockSlug:  string(flat.BlockSlug),
 			Rooms:      flat.Rooms,
 			FinishType: flat.FinishType,
 		}
@@ -537,11 +554,11 @@ func (f *Flat) StringWithOptions() string {
 	}
 
 	var corp string
-	bulkSplit := strings.Split(f.BulkName, " ")
+	bulkSplit := strings.Split(string(f.BulkName), " ")
 	if len(bulkSplit) > 1 {
 		corp = bulkSplit[1]
 	} else {
-		corp = f.BulkName
+		corp = string(f.BulkName)
 	}
 	id := f.ID
 	flatURL := fmt.Sprintf("https://www.pik.ru/flat/%v", id)
@@ -554,7 +571,7 @@ func (f *Flat) StringWithOptions() string {
 		reserve = "🔒"
 	}
 
-	settlementQuarter := GetSettlementQuarter(f.SettlementDate)
+	settlementQuarter := GetSettlementQuarter(string(f.SettlementDate))
 
 	finishTypeString := GetFinishTypeString(f.FinishType)
 
