@@ -20,7 +20,6 @@ var RootEnvType string
 
 func init() {
 	flag.StringVar(&RootEnvType, "envtype", "dev", "dev|test|prod")
-	flag.Parse()
 }
 
 func GetEnvType() EnvType {

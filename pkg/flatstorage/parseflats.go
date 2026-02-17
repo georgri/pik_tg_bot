@@ -27,6 +27,8 @@ const (
 	smallWindowPeriod = 24 * time.Hour
 
 	collapsePricesPeriod = 1 * time.Hour
+
+	minShownPriceHistoryYear = 2023
 )
 
 // url example: https://flat.pik-service.ru/api/v1/filter/flat-by-block/1240?type=1,2&location=2,3&flatLimit=80&onlyFlats=1
@@ -149,6 +151,16 @@ func (f *Flat) GetPriceDropPercentage() float64 {
 	return ((float64(f.Price) / float64(f.OldPrice)) - 1) * 100
 }
 
+// IsPriceDroppedByAtLeast checks price drop using integer math to avoid float rounding issues.
+// Example: old=100, new=90, percent=10 => true.
+func (f *Flat) IsPriceDroppedByAtLeast(percent int64) bool {
+	if f == nil || f.OldPrice == 0 || percent <= 0 {
+		return false
+	}
+	// new/old <= 1 - percent/100  <=>  new*100 <= old*(100-percent)
+	return f.Price*100 <= f.OldPrice*(100-percent)
+}
+
 func (f *Flat) GetPriceBelowAveragePercentage() float64 {
 	if f == nil || f.Area == 0 || f.AveragePrice == 0 {
 		return 0
@@ -199,8 +211,26 @@ func (f *Flat) GetPriceHistory() PriceHistory {
 	}
 
 	f.PriceHistory = prunePriceHistory(f.PriceHistory)
+	f.PriceHistory = filterPriceHistoryByMinYear(f.PriceHistory, minShownPriceHistoryYear)
 
 	return f.PriceHistory
+}
+
+func filterPriceHistoryByMinYear(history PriceHistory, minYear int) PriceHistory {
+	if len(history) == 0 {
+		return history
+	}
+	result := history[:0]
+	for _, entry := range history {
+		t, err := time.Parse(time.RFC3339, entry.Date)
+		if err != nil {
+			continue
+		}
+		if t.Year() >= minYear {
+			result = append(result, entry)
+		}
+	}
+	return result
 }
 
 func prunePriceHistory(history PriceHistory) PriceHistory {
