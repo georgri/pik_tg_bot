@@ -33,8 +33,49 @@ type HTTPResponse struct {
 	Body        []byte
 }
 
+var httpClient = &http.Client{
+	Timeout: 30 * time.Second,
+}
+
+func addPikBrowserLikeHeaders(req *http.Request) {
+	if req == nil || req.URL == nil {
+		return
+	}
+
+	// Add browser-like headers only for PIK domains to reduce "flapping"
+	// (sometimes returning the unrelated main page HTML instead of JSON).
+	host := strings.ToLower(req.URL.Hostname())
+	if !strings.Contains(host, "pik-service.ru") && !strings.Contains(host, "pik.ru") {
+		return
+	}
+
+	// Do NOT set Accept-Encoding: Go's http.Transport will add "gzip" and
+	// transparently decode it. Advertising "br"/"zstd" would risk receiving
+	// an encoding we can't decode.
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+	req.Header.Set("Accept-Language", "ru,en;q=0.9")
+	req.Header.Set("Cache-Control", "max-age=0")
+	req.Header.Set("Upgrade-Insecure-Requests", "1")
+
+	// These are often used by bot-detection heuristics; harmless for an API endpoint.
+	req.Header.Set("Sec-Fetch-Dest", "document")
+	req.Header.Set("Sec-Fetch-Mode", "navigate")
+	req.Header.Set("Sec-Fetch-Site", "none")
+	req.Header.Set("Sec-Fetch-User", "?1")
+	req.Header.Set("sec-ch-ua", "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"YaBrowser\";v=\"25.10\", \"Yowser\";v=\"2.5\"")
+	req.Header.Set("sec-ch-ua-mobile", "?0")
+	req.Header.Set("sec-ch-ua-platform", "\"macOS\"")
+}
+
 func GetURLResponse(url string) (*HTTPResponse, error) {
-	resp, err := http.Get(url)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build request for %s: %w", url, err)
+	}
+	addPikBrowserLikeHeaders(req)
+
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, &NetworkError{URL: url, Err: err}
 	}
