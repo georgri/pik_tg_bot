@@ -17,8 +17,6 @@ const (
 	BackupChatID   = -1002180492270
 )
 
-var BackupBotToken = util.GetBotToken()
-
 type SendFileResponse struct {
 	OK          bool   `json:"ok"`
 	ErrorCode   int64  `json:"error_code"`
@@ -41,7 +39,8 @@ func SendLastBackupFile() error {
 		ftype: "document",
 		fdata: fileContent,
 	}
-	url := fmt.Sprintf("https://api.telegram.org/bot%v/%v?chat_id=%v", BackupBotToken, SendFileMethod, BackupChatID)
+	token := util.GetBotToken()
+	url := fmt.Sprintf("https://api.telegram.org/bot%v/%v?chat_id=%v", token, SendFileMethod, BackupChatID)
 	resp, err := sendPostRequest(url, cnt)
 	if err != nil {
 		return err

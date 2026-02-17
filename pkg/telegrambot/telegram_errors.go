@@ -210,8 +210,10 @@ func telegramUnauthorizedHint(token string) string {
 		return "bot token is empty; ensure it is loaded correctly (bot.token or your configured source) and restart"
 	}
 	if token == util.TestBotToken {
+		if env == util.EnvTypeProd && tokenFilePresent {
+			return fmt.Sprintf("you are using TestBotToken while envtype=prod and %s is present. This usually means the token was loaded before flags/envtype were applied (init-time load) or you are reading a different bot.token due to a different working directory; ensure envtype is set at process start, bot.token contains the real token, and restart", util.TokenFile)
+		}
 		return "you are using TestBotToken; it may be revoked/invalid. Put a real token into bot.token (or switch envtype) and restart"
 	}
 	return "401 usually means the bot token is invalid/revoked or belongs to a different bot. Re-check BotFather token, ensure bot.token contains exactly the token (no spaces/newlines), and try calling getMe with curl to verify the token works"
 }
-
